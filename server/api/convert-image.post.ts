@@ -46,6 +46,10 @@ export default defineEventHandler(async (event) => {
     fs.writeFileSync(tempPath, imagePart.data)
 
     const result = await imageService.convertToSticker(tempPath, originalFilename)
+    const pngPath = path.join(config.paths.temp, result.result.png.filename)
+    const webpPath = path.join(config.paths.temp, result.result.webp.filename)
+    const pngBase64 = fs.readFileSync(pngPath).toString('base64')
+    const webpBase64 = fs.readFileSync(webpPath).toString('base64')
 
     return {
       success: true,
@@ -54,7 +58,17 @@ export default defineEventHandler(async (event) => {
         ...result.original,
         size: imagePart.data.length
       },
-      result: result.result
+      result: {
+        ...result.result,
+        png: {
+          ...result.result.png,
+          dataUrl: `data:image/png;base64,${pngBase64}`
+        },
+        webp: {
+          ...result.result.webp,
+          dataUrl: `data:image/webp;base64,${webpBase64}`
+        }
+      }
     }
   } catch (error: any) {
     logger.error('Image conversion error:', error)

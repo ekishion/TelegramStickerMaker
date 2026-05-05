@@ -168,6 +168,79 @@ export async function uploadStickerFile(botToken: string, userId: string, sticke
   })
 }
 
+export async function uploadStickerBuffer(
+  botToken: string,
+  userId: string,
+  fileName: string,
+  stickerBuffer: Buffer,
+  stickerFormat: string
+) {
+  const FormData = (await import('form-data')).default
+  const form = new FormData()
+
+  const ext = path.extname(fileName).toLowerCase()
+  let contentType: string
+  if (ext === '.webp') contentType = 'image/webp'
+  else if (ext === '.webm') contentType = 'video/webm'
+  else if (ext === '.tgs') contentType = 'application/gzip'
+  else contentType = 'application/octet-stream'
+
+  form.append('user_id', String(userId))
+  form.append('sticker', stickerBuffer, {
+    filename: fileName,
+    contentType,
+    knownLength: stickerBuffer.length
+  })
+  form.append('sticker_format', stickerFormat)
+
+  const url = `${TELEGRAM_API_BASE}${botToken}/uploadStickerFile`
+  logger.info(`Uploading sticker buffer: ${fileName}, format: ${stickerFormat}, size: ${stickerBuffer.length} bytes`)
+
+  return new Promise<any>((resolve, reject) => {
+    const urlObj = new URL(url)
+    form.submit(
+      {
+        protocol: urlObj.protocol as 'https:' | 'http:',
+        hostname: urlObj.hostname,
+        port: urlObj.port ? Number(urlObj.port) : (urlObj.protocol === 'https:' ? 443 : 80),
+        path: urlObj.pathname,
+        method: 'POST'
+      },
+      (err: Error | null, res: any) => {
+        if (err) {
+          logger.error(`Network error uploading sticker buffer: ${err.message}`)
+          return reject(new Error(`Network error: ${err.message}`))
+        }
+
+        let responseBody = ''
+        res.on('data', (chunk: Buffer) => {
+          responseBody += chunk.toString()
+        })
+
+        res.on('end', () => {
+          logger.info(`Telegram API uploadStickerFile(buffer) response (status: ${res.statusCode}): ${responseBody.substring(0, 500)}`)
+          if (!responseBody || responseBody.trim() === '') {
+            return reject(new Error(`Empty response from Telegram (HTTP ${res.statusCode})`))
+          }
+          try {
+            const result = JSON.parse(responseBody)
+            if (!result.ok) {
+              return reject(new Error(result.description || 'Failed to upload sticker buffer'))
+            }
+            resolve(result.result)
+          } catch {
+            return reject(new Error(`Invalid JSON response: ${responseBody.substring(0, 200)}`))
+          }
+        })
+
+        res.on('error', (error: Error) => {
+          reject(new Error(`Response error: ${error.message}`))
+        })
+      }
+    )
+  })
+}
+
 export async function createStickerSet(botToken: string, userId: string, name: string, title: string, stickers: any[]) {
   const result = await callTelegramApi(botToken, 'createNewStickerSet', {
     user_id: userId,
@@ -296,12 +369,93 @@ export async function batchUploadStickers(
   }
 }
 
+export async function batchUploadStickerBuffers(
+  botToken: string,
+  userId: string,
+  packName: string,
+  packTitle: string,
+  stickers: { name: string; buffer: Buffer; format: 'static' | 'video' }[],
+  emoji = '😊'
+) {
+  const results: {
+    success: { fileName: string; index: number }[]
+    failed: { fileName: string; index: number; error: string }[]
+    packUrl: string | null
+    packName: string | null
+    totalCount: number
+  } = {
+    success: [],
+    failed: [],
+    packUrl: null,
+    packName: null,
+    totalCount: stickers.length
+  }
+
+  try {
+    const botInfo = await getBotInfo(botToken)
+    const fullPackName = `${packName}_by_${botInfo.username}`
+
+    let packExists = false
+    try {
+      const existingPack = await getStickerSet(botToken, fullPackName)
+      packExists = !!existingPack
+    } catch {
+      packExists = false
+    }
+
+    let uploadedCount = 0
+
+    for (let i = 0; i < stickers.length; i++) {
+      const sticker = stickers[i]!
+      try {
+        const uploadedFile = await uploadStickerBuffer(botToken, userId, sticker.name, sticker.buffer, sticker.format)
+        const inputSticker = {
+          sticker: uploadedFile.file_id,
+          emoji_list: [emoji],
+          format: sticker.format
+        }
+
+        if (!packExists && uploadedCount === 0) {
+          await createStickerSet(botToken, userId, fullPackName, packTitle, [inputSticker])
+          packExists = true
+        } else {
+          await addStickerToSet(botToken, userId, fullPackName, inputSticker)
+        }
+
+        uploadedCount++
+        results.success.push({ fileName: sticker.name, index: i })
+
+        if (i < stickers.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500))
+        }
+      } catch (error: any) {
+        logger.error(`Failed to upload ${sticker.name}: ${error.message}`)
+        results.failed.push({ fileName: sticker.name, index: i, error: error.message })
+
+        if (error.message.includes('too_much') || error.message.includes('TOO_MUCH')) {
+          logger.warn('Sticker pack is full, stopping upload')
+          break
+        }
+      }
+    }
+
+    results.packUrl = `https://t.me/addstickers/${fullPackName}`
+    results.packName = fullPackName
+    return results
+  } catch (error: any) {
+    logger.error(`Batch upload failed: ${error.message}`)
+    throw error
+  }
+}
+
 export const telegramService = {
   validateBotToken,
   getBotInfo,
   uploadStickerFile,
+  uploadStickerBuffer,
   createStickerSet,
   addStickerToSet,
   getStickerSet,
-  batchUploadStickers
+  batchUploadStickers,
+  batchUploadStickerBuffers
 }

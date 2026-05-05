@@ -93,8 +93,9 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useHistoryStore } from '@/stores/history'
 
-interface OutputFile { name: string; type: string; size: number; url: string }
+interface OutputFile { name: string; type: string; size: number; url: string; source: 'browser' | 'server' }
 interface BotInfo { id: number; username: string; firstName: string }
 
 const botToken = ref('')
@@ -112,11 +113,12 @@ const clearingCache = ref(false)
 const uploading = ref(false)
 const uploadResult = ref<{ success: number; failed: number } | null>(null)
 const cacheMessage = ref('')
+const historyStore = useHistoryStore()
 
 const allSelected = computed(() => outputFiles.value.length > 0 && selectedFiles.value.length === outputFiles.value.length)
 const canUpload = computed(() => botToken.value && userId.value && packName.value && selectedFiles.value.length > 0)
 
-onMounted(() => { loadConfig(); loadOutputFiles() })
+onMounted(() => { loadConfig(); historyStore.load(); loadOutputFiles() })
 
 const loadConfig = () => {
   const raw = localStorage.getItem('telegram_config'); if (!raw) return
@@ -138,12 +140,31 @@ const validateToken = async () => {
 const loadOutputFiles = async () => {
   loadingFiles.value = true
   try {
-    const res = await fetch('/api/telegram/output-files', { cache: 'no-store' })
-    const data = await res.json()
-    outputFiles.value = (data.files || []).map((f: any) => ({
-      ...f,
-      url: `/api/telegram/file/${encodeURIComponent(f.name)}`
-    }))
+    const browserFiles: OutputFile[] = []
+    for (const item of historyStore.items) {
+      const base = item.fileName || 'sticker'
+      if (item.result?.png?.startsWith('data:')) browserFiles.push({ name: `${base}.png`, type: 'static', size: item.size || 0, url: item.result.png, source: 'browser' })
+      if (item.result?.webp?.startsWith('data:')) browserFiles.push({ name: `${base}.webp`, type: 'static', size: item.size || 0, url: item.result.webp, source: 'browser' })
+      if (item.result?.webm?.startsWith('data:')) browserFiles.push({ name: `${base}.webm`, type: 'video', size: item.size || 0, url: item.result.webm, source: 'browser' })
+    }
+
+    let serverFiles: OutputFile[] = []
+    try {
+      const res = await fetch('/api/telegram/output-files', { cache: 'no-store' })
+      const data = await res.json()
+      serverFiles = (data.files || []).map((f: any) => ({
+        ...f,
+        url: `/api/telegram/file/${encodeURIComponent(f.name)}`,
+        source: 'server'
+      }))
+    } catch {}
+
+    const seen = new Set<string>()
+    outputFiles.value = [...browserFiles, ...serverFiles].filter(file => {
+      if (seen.has(file.name)) return false
+      seen.add(file.name)
+      return true
+    })
   } catch {
     outputFiles.value = []
   } finally {
@@ -177,7 +198,14 @@ const toggleSelectAll = () => { selectedFiles.value = allSelected.value ? [] : o
 const startUpload = async () => {
   if (!canUpload.value) return; uploading.value = true; uploadResult.value = null
   try {
-    const res = await fetch('/api/telegram/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ botToken: botToken.value, userId: Number(userId.value), packName: packName.value, packTitle: packTitle.value || 'My Sticker Pack', emoji: emoji.value || '😊', files: selectedFiles.value }) })
+    const selectedOutputs = outputFiles.value.filter(file => selectedFiles.value.includes(file.name))
+    const uploadFiles = selectedOutputs.map(file => {
+      if (file.source === 'browser' && file.url.startsWith('data:')) {
+        return { name: file.name, url: file.url }
+      }
+      return file.name
+    })
+    const res = await fetch('/api/telegram/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ botToken: botToken.value, userId: Number(userId.value), packName: packName.value, packTitle: packTitle.value || 'My Sticker Pack', emoji: emoji.value || '😊', files: uploadFiles }) })
     const data = await res.json(); if (!res.ok) throw new Error(data.error || '上传失败'); uploadResult.value = data.results || { success: 0, failed: 0 }
   } catch (e: any) { uploadResult.value = { success: 0, failed: selectedFiles.value.length }; tokenError.value = e.message } finally { uploading.value = false }
 }

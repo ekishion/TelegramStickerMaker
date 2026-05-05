@@ -158,7 +158,17 @@ const toBatchFiles = (items: any[]) => items.flatMap(item => {
 
 const downloadSelected = async () => {
   const targets = historyStore.items.filter((i: any) => selectedIds.value.includes(i.id)); if (!targets.length) return
-  const res = await fetch('/api/download-batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ files: toBatchFiles(targets) }) })
+  const files = toBatchFiles(targets)
+  if (files.some(file => String(file.url).startsWith('data:'))) {
+    files.forEach(file => {
+      const a = document.createElement('a')
+      a.href = file.url
+      a.download = file.name
+      a.click()
+    })
+    return
+  }
+  const res = await fetch('/api/download-batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ files }) })
   if (!res.ok) return; const blob = await res.blob(); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `history-${Date.now()}.zip`; a.click(); URL.revokeObjectURL(url)
 }
 

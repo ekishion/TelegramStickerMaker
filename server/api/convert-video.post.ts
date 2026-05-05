@@ -45,6 +45,8 @@ export default defineEventHandler(async (event) => {
     logger.info(`[convert-video] saved upload: ${tempFilename} (${videoPart.data.length} bytes)`)
 
     const result = await videoService.convertToWebm(tempPath, originalFilename, 2)
+    const outputBuffer = fs.readFileSync(result.outputPath)
+    const webmBase64 = outputBuffer.toString('base64')
 
     // 删除原始上传文件
     await safeDeleteFile(tempPath)
@@ -60,7 +62,8 @@ export default defineEventHandler(async (event) => {
         width: result.width,
         height: result.height,
         duration: result.duration,
-        size: result.size
+        size: result.size,
+        dataUrl: `data:video/webm;base64,${webmBase64}`
       }
     }
   } catch (error: any) {

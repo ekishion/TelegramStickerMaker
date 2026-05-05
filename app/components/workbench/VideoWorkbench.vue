@@ -30,8 +30,8 @@
       </div>
 
       <div v-if="converting" class="convert-progress">
-        <div class="progress-bar">
-          <div class="progress-fill" :style="{ width: overallProgress + '%' }"></div>
+        <div class="task-progress-bar">
+          <div class="task-progress-fill" :style="{ width: overallProgress + '%' }"></div>
         </div>
         <div class="history-meta">
           <span>{{ convertStatus }}</span>
@@ -50,10 +50,16 @@
               <span>{{ formatFileSize(task.file.size) }}</span>
               <span class="chip">{{ statusText(task.status) }}</span>
             </div>
+            <div v-if="task.status === 'uploading' || task.status === 'converting'" class="task-progress">
+              <div class="task-progress-bar">
+                <div class="task-progress-fill" :style="{ width: task.uploadProgress + '%' }"></div>
+              </div>
+              <span class="task-progress-label">{{ task.status === 'uploading' ? task.uploadProgress + '%' : '服务器处理中…' }}</span>
+            </div>
             <div v-if="task.error" class="error-text">{{ task.error }}</div>
           </div>
           <div class="history-actions">
-            <button class="kv-action secondary" type="button" @click="convertSingle(task)" :disabled="task.status === 'converting' || converting">转换</button>
+            <button class="kv-action secondary" type="button" @click="convertSingle(task)" :disabled="task.status === 'uploading' || task.status === 'converting' || converting">转换</button>
             <button class="kv-action secondary" type="button" @click="downloadOne(task)" :disabled="!task.result">下载</button>
             <button class="kv-action secondary" type="button" @click="removeTask(task.id)">移除</button>
           </div>
@@ -72,6 +78,7 @@ import { useLightbox } from '@/composables/useLightbox'
 
 interface VideoTaskResult {
   filename: string
+  url: string
   width: number
   height: number
   duration: number
@@ -83,12 +90,13 @@ interface VideoTask {
   file: File
   name: string
   previewUrl: string
-  status: 'pending' | 'converting' | 'done' | 'error'
+  status: 'pending' | 'uploading' | 'converting' | 'done' | 'error'
+  uploadProgress: number
   result: VideoTaskResult | null
   error: string
 }
 
-const statusText = (s: string) => ({ pending: '等待', converting: '转换中', done: '完成', error: '失败' }[s] || s)
+const statusText = (s: string) => ({ pending: '等待', uploading: '上传中', converting: '转换中', done: '完成', error: '失败' }[s] || s)
 
 const tasks = ref<VideoTask[]>([])
 const limits = reactive({ maxVideoFiles: 100 })
@@ -127,6 +135,7 @@ const handleFilesSelected = (files: File[]) => {
       name: file.name,
       previewUrl: URL.createObjectURL(file),
       status: 'pending',
+      uploadProgress: 0,
       result: null,
       error: ''
     })
@@ -134,25 +143,35 @@ const handleFilesSelected = (files: File[]) => {
 }
 
 const convertSingle = async (task: VideoTask) => {
-  if (!task || task.status === 'converting' || converting.value) return
+  if (!task || task.status === 'uploading' || task.status === 'converting' || converting.value) return
 
-  task.status = 'converting'
+  task.status = 'uploading'
+  task.uploadProgress = 0
   task.error = ''
 
   try {
     const formData = new FormData()
     formData.append('video', task.file, task.name)
 
-    const res = await fetch('/api/convert-video', { method: 'POST', body: formData })
-    const data = await res.json()
+    const data = await new Promise<any>((resolve, reject) => {
+      const xhr = new XMLHttpRequest()
+      xhr.open('POST', '/api/convert-video')
+      xhr.upload.onprogress = (e) => { if (e.lengthComputable) task.uploadProgress = Math.round((e.loaded / e.total) * 100) }
+      xhr.upload.onload = () => { task.status = 'converting'; task.uploadProgress = 100 }
+      xhr.onload = () => {
+        try { resolve(JSON.parse(xhr.responseText)) } catch { reject(new Error('响应解析失败')) }
+      }
+      xhr.onerror = () => reject(new Error('网络错误'))
+      xhr.send(formData)
+    })
 
-    if (!res.ok) {
-      throw new Error(data.message || '转换失败')
-    }
+    if (!data.result) throw new Error(data.message || '转换失败')
 
     task.status = 'done'
+    const outputUrl = data.result.dataUrl || `/api/telegram/file/${encodeURIComponent(data.result.filename)}`
     task.result = {
       filename: data.result.filename,
+      url: outputUrl,
       width: data.result.width,
       height: data.result.height,
       duration: data.result.duration,
@@ -165,7 +184,7 @@ const convertSingle = async (task: VideoTask) => {
       preview: task.previewUrl,
       duration: data.result.duration,
       size: task.file.size,
-      result: { webm: `/api/telegram/file/${encodeURIComponent(data.result.filename)}` }
+      result: { webm: outputUrl }
     })
   } catch (error: any) {
     task.status = 'error'
@@ -192,8 +211,11 @@ const convertAll = async () => {
 }
 
 const downloadOne = (task: VideoTask) => {
-  if (!task.result?.filename) return
-  window.open(`/api/telegram/file/${encodeURIComponent(task.result.filename)}`, '_blank')
+  if (!task.result?.url) return
+  const a = document.createElement('a')
+  a.href = task.result.url
+  a.download = `${task.name.replace(/\.[^.]+$/, '')}.webm`
+  a.click()
 }
 
 const removeTask = (id: string) => {
@@ -216,15 +238,26 @@ const openPreview = (task: VideoTask) => {
 .convert-progress {
   margin-top: var(--gap-md);
 }
-.progress-bar {
+.task-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.task-progress-bar {
+  flex: 1;
   height: 4px;
   background: var(--color-border);
   border-radius: var(--radius-full);
   overflow: hidden;
 }
-.progress-fill {
+.task-progress-fill {
   height: 100%;
   background: var(--color-accent);
   transition: width 0.2s ease;
+}
+.task-progress-label {
+  font-size: 0.7rem;
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
 }
 </style>
