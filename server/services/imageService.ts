@@ -4,6 +4,7 @@ import path from 'path'
 import { config } from '../utils/config'
 import { logger } from '../utils/logger'
 import { safeDeleteFile } from '../utils/fileCleanup'
+import { sanitizeOutputBaseName } from '../utils/filename'
 
 export class ImageService {
   calculateDimensions(width: number, height: number) {
@@ -30,8 +31,7 @@ export class ImageService {
       const { newWidth, newHeight } = this.calculateDimensions(originalWidth, originalHeight)
 
       const timestamp = Date.now()
-      const rawBaseName = path.basename(originalFilename, path.extname(originalFilename))
-      const safeBaseName = rawBaseName.replace(/[^\w.-]/g, '_').slice(0, 40)
+      const safeBaseName = sanitizeOutputBaseName(originalFilename)
       const outputFilename = `${safeBaseName}-${timestamp}`
       const pngPath = path.join(config.paths.temp, `${outputFilename}.png`)
       const webpPath = path.join(config.paths.temp, `${outputFilename}.webp`)

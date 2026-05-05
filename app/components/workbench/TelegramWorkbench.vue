@@ -47,9 +47,14 @@
           <strong>输出文件</strong>
           <div class="text-secondary">选择要上传的贴纸</div>
         </div>
-        <button class="kv-action secondary" type="button" @click="loadOutputFiles" :disabled="loadingFiles">
-          {{ loadingFiles ? '加载中...' : '刷新' }}
-        </button>
+        <div class="workbench-actions">
+          <button class="kv-action secondary" type="button" @click="loadOutputFiles" :disabled="loadingFiles">
+            {{ loadingFiles ? '加载中...' : '刷新' }}
+          </button>
+          <button class="kv-action secondary" type="button" @click="clearServerCache" :disabled="clearingCache">
+            {{ clearingCache ? '清理中...' : '清理缓存' }}
+          </button>
+        </div>
       </div>
 
       <div v-if="!outputFiles.length" class="empty-state">暂无输出文件</div>
@@ -80,6 +85,7 @@
           {{ uploading ? '上传中...' : '上传到 Telegram' }}
         </button>
         <span v-if="uploadResult" class="chip">成功 {{ uploadResult.success }} / 失败 {{ uploadResult.failed }}</span>
+        <span v-if="cacheMessage" class="chip">{{ cacheMessage }}</span>
       </div>
     </div>
   </div>
@@ -102,8 +108,10 @@ const tokenError = ref('')
 const outputFiles = ref<OutputFile[]>([])
 const selectedFiles = ref<string[]>([])
 const loadingFiles = ref(false)
+const clearingCache = ref(false)
 const uploading = ref(false)
 const uploadResult = ref<{ success: number; failed: number } | null>(null)
+const cacheMessage = ref('')
 
 const allSelected = computed(() => outputFiles.value.length > 0 && selectedFiles.value.length === outputFiles.value.length)
 const canUpload = computed(() => botToken.value && userId.value && packName.value && selectedFiles.value.length > 0)
@@ -129,7 +137,35 @@ const validateToken = async () => {
 
 const loadOutputFiles = async () => {
   loadingFiles.value = true
-  try { const res = await fetch('/api/telegram/output-files'); const data = await res.json(); outputFiles.value = (data.files || []).map((f: any) => ({ ...f, url: `/api/telegram/file/${f.name}` })) } catch { outputFiles.value = [] } finally { loadingFiles.value = false }
+  try {
+    const res = await fetch('/api/telegram/output-files', { cache: 'no-store' })
+    const data = await res.json()
+    outputFiles.value = (data.files || []).map((f: any) => ({
+      ...f,
+      url: `/api/telegram/file/${encodeURIComponent(f.name)}`
+    }))
+  } catch {
+    outputFiles.value = []
+  } finally {
+    loadingFiles.value = false
+  }
+}
+
+const clearServerCache = async () => {
+  clearingCache.value = true
+  cacheMessage.value = ''
+  try {
+    const res = await fetch('/api/telegram/cache-clear', { method: 'POST' })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data?.error || '清理缓存失败')
+    cacheMessage.value = `已清理 ${data.removed || 0} 个缓存文件`
+    selectedFiles.value = []
+    await loadOutputFiles()
+  } catch (e: any) {
+    cacheMessage.value = e.message || '清理缓存失败'
+  } finally {
+    clearingCache.value = false
+  }
 }
 
 const toggleSelect = (name: string) => {

@@ -130,7 +130,11 @@ const convertSingle = async (task: ImageTask) => {
     const data = await response.json()
     if (!response.ok) throw new Error(data.error || '转换失败')
     task.status = 'done'
-    task.result = { ...data.result, png: { ...data.result.png, url: `/api/telegram/file/${data.result.png.filename}` }, webp: { ...data.result.webp, url: `/api/telegram/file/${data.result.webp.filename}` } }
+    task.result = {
+      ...data.result,
+      png: { ...data.result.png, url: `/api/telegram/file/${encodeURIComponent(data.result.png.filename)}` },
+      webp: { ...data.result.webp, url: `/api/telegram/file/${encodeURIComponent(data.result.webp.filename)}` }
+    }
     historyStore.add({ type: 'image', fileName: task.name.replace(/\.[^.]+$/, ''), preview: task.result.png.url, width: task.width, height: task.height, size: task.file.size, result: { png: task.result.png.url, webp: task.result.webp.url } })
   } catch (error: any) {
     task.status = 'error'; task.error = error.message || '转换失败'

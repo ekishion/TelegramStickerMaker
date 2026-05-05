@@ -165,7 +165,7 @@ const convertSingle = async (task: VideoTask) => {
       preview: task.previewUrl,
       duration: data.result.duration,
       size: task.file.size,
-      result: { webm: data.result.filename }
+      result: { webm: `/api/telegram/file/${encodeURIComponent(data.result.filename)}` }
     })
   } catch (error: any) {
     task.status = 'error'
@@ -193,7 +193,7 @@ const convertAll = async () => {
 
 const downloadOne = (task: VideoTask) => {
   if (!task.result?.filename) return
-  window.open(`/api/telegram/file/${task.result.filename}`, '_blank')
+  window.open(`/api/telegram/file/${encodeURIComponent(task.result.filename)}`, '_blank')
 }
 
 const removeTask = (id: string) => {

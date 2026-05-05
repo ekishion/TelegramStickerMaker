@@ -1,11 +1,20 @@
 import fs from 'fs'
 import path from 'path'
 import { config } from '../../../utils/config'
+import { setNoStoreHeaders } from '../../../utils/httpCache'
 
 export default defineEventHandler(event => {
-  const filename = event.context.params?.filename
-  if (!filename) {
+  setNoStoreHeaders(event)
+
+  const rawFilename = event.context.params?.filename
+  if (!rawFilename) {
     throw createError({ statusCode: 400, statusMessage: 'Missing filename' })
+  }
+  let filename = rawFilename
+  try {
+    filename = decodeURIComponent(rawFilename)
+  } catch {
+    filename = rawFilename
   }
   const filePath = path.join(config.paths.temp, filename)
   const resolvedPath = path.resolve(filePath)

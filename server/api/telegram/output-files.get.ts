@@ -1,11 +1,14 @@
 import fs from 'fs'
 import path from 'path'
 import { config } from '../../utils/config'
+import { setNoStoreHeaders } from '../../utils/httpCache'
 
 const EXTENSIONS = new Set(['.webp', '.webm'])
 const isUploadTempFile = (fileName: string) => /^upload-\d+-\d+\./i.test(fileName)
 
-export default defineEventHandler(() => {
+export default defineEventHandler(event => {
+  setNoStoreHeaders(event)
+
   const tempDir = config.paths.temp
   if (!fs.existsSync(tempDir)) {
     return { files: [], total: 0 }

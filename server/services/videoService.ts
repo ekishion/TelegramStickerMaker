@@ -5,6 +5,7 @@ import path from 'path'
 import { config } from '../utils/config'
 import { safeDeleteFile } from '../utils/fileCleanup'
 import { logger } from '../utils/logger'
+import { sanitizeOutputBaseName } from '../utils/filename'
 
 const execFileAsync = promisify(execFile)
 
@@ -49,8 +50,7 @@ class VideoService {
       throw Object.assign(new Error('系统未安装 FFmpeg，无法转换视频'), { statusCode: 500 })
     }
 
-    const baseName = path.basename(originalFilename, path.extname(originalFilename))
-    const safeName = baseName.replace(/[^\w.-]/g, '_').slice(0, 40)
+    const safeName = sanitizeOutputBaseName(originalFilename)
     const outputFilename = `${safeName}-${Date.now()}.webm`
     const outputPath = path.join(config.paths.temp, outputFilename)
 

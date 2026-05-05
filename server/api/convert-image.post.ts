@@ -9,7 +9,11 @@ import { logger } from '../utils/logger'
 function fixFilenameEncoding(filename: string): string {
   try {
     if (Array.from(filename).every(char => char.charCodeAt(0) <= 0x7f)) return filename
-    return Buffer.from(filename, 'latin1').toString('utf8')
+    if (/[\u3400-\u9fff\uf900-\ufaff]/u.test(filename)) return filename
+    const decoded = Buffer.from(filename, 'latin1').toString('utf8')
+    if (decoded.includes('\uFFFD')) return filename
+    if (/[\u3400-\u9fff\uf900-\ufaff]/u.test(decoded)) return decoded
+    return filename
   } catch {
     return filename
   }
