@@ -55,8 +55,8 @@
         <div class="section-stack">
           <article v-for="item in group" :key="item.id" class="history-card">
             <div class="history-preview" @click="openPreview(item)">
-              <img v-if="item.type === 'image'" :src="item.preview" :alt="item.fileName" />
-              <video v-else :src="item.preview" muted loop></video>
+              <img v-if="item.type === 'image'" :src="resolveUrl(item.preview)" :alt="item.fileName" />
+              <video v-else :src="resolveUrl(item.preview)" muted loop></video>
             </div>
             <div class="history-info">
               <div class="history-info-header">
@@ -97,10 +97,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useHistoryStore } from '@/stores/history'
 import { formatFileSize, formatTimestamp, groupByDay } from '@/utils/format'
 import { useLightbox } from '@/composables/useLightbox'
+import { getCachedSticker } from '@/utils/browserStickerStore'
 
 const historyStore = useHistoryStore()
 const lightbox = useLightbox()
@@ -109,8 +110,38 @@ const typeFilter = ref('all')
 const formatFilter = ref('all')
 const tagFilter = ref('all')
 const selectedIds = ref<string[]>([])
+const cachedUrls = ref<Record<string, string>>({})
 
-onMounted(() => { historyStore.load() })
+onMounted(async () => {
+  historyStore.load()
+  await resolveCachedUrls()
+})
+
+onBeforeUnmount(() => {
+  Object.values(cachedUrls.value).forEach(url => URL.revokeObjectURL(url))
+})
+
+const resolveUrl = (url: string) => {
+  if (!url?.startsWith('cache:')) return url
+  const id = url.slice(6)
+  return cachedUrls.value[id] || ''
+}
+
+const resolveCachedUrls = async () => {
+  const ids = new Set<string>()
+  historyStore.items.forEach((item: any) => {
+    const values = [item.preview, item.result?.png, item.result?.webp, item.result?.webm]
+    values.forEach(value => {
+      if (typeof value === 'string' && value.startsWith('cache:')) ids.add(value.slice(6))
+    })
+  })
+
+  for (const id of ids) {
+    if (cachedUrls.value[id]) continue
+    const cached = await getCachedSticker(id)
+    if (cached) cachedUrls.value[id] = URL.createObjectURL(cached.blob)
+  }
+}
 
 const availableTags = computed(() => {
   const tags = new Set<string>()
@@ -145,7 +176,7 @@ const updateTag = (id: string, tag: string) => { historyStore.updateTag(id, tag.
 
 const downloadOne = (item: any, format: string) => {
   const url = item.result?.[format]; if (!url) return
-  const a = document.createElement('a'); a.href = url; a.download = `${item.fileName}.${format}`; a.click()
+  const a = document.createElement('a'); a.href = resolveUrl(url); a.download = `${item.fileName}.${format}`; a.click()
 }
 
 const toBatchFiles = (items: any[]) => items.flatMap(item => {
@@ -159,10 +190,10 @@ const toBatchFiles = (items: any[]) => items.flatMap(item => {
 const downloadSelected = async () => {
   const targets = historyStore.items.filter((i: any) => selectedIds.value.includes(i.id)); if (!targets.length) return
   const files = toBatchFiles(targets)
-  if (files.some(file => String(file.url).startsWith('data:'))) {
+  if (files.some(file => String(file.url).startsWith('data:') || String(file.url).startsWith('cache:'))) {
     files.forEach(file => {
       const a = document.createElement('a')
-      a.href = file.url
+      a.href = resolveUrl(file.url)
       a.download = file.name
       a.click()
     })
@@ -178,9 +209,9 @@ const clearHistory = () => { historyStore.clear(); selectedIds.value = [] }
 const openPreview = (item: any) => {
   const meta = `${item.width}x${item.height} · ${formatFileSize(item.size || 0)}`
   if (item.type === 'image') {
-    lightbox.openImage(item.preview, item.fileName, meta)
+    lightbox.openImage(resolveUrl(item.preview), item.fileName, meta)
   } else {
-    lightbox.openVideo(item.preview, item.fileName, meta)
+    lightbox.openVideo(resolveUrl(item.preview), item.fileName, meta)
   }
 }
 </script>

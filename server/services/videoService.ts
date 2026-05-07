@@ -5,7 +5,7 @@ import path from 'path'
 import { config } from '../utils/config'
 import { safeDeleteFile } from '../utils/fileCleanup'
 import { logger } from '../utils/logger'
-import { sanitizeOutputBaseName } from '../utils/filename'
+import { generateTimestampHashBaseName } from '../utils/filename'
 
 const execFileAsync = promisify(execFile)
 
@@ -50,8 +50,7 @@ class VideoService {
       throw Object.assign(new Error('系统未安装 FFmpeg，无法转换视频'), { statusCode: 500 })
     }
 
-    const safeName = sanitizeOutputBaseName(originalFilename)
-    const outputFilename = `${safeName}-${Date.now()}.webm`
+    const outputFilename = `${generateTimestampHashBaseName(originalFilename)}.webm`
     const outputPath = path.join(config.paths.temp, outputFilename)
 
     // VP9 + alpha 转码，适配 Telegram 动态贴纸

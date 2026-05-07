@@ -7,6 +7,58 @@ import { logger } from '../../utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {
+    const contentType = getHeader(event, 'content-type') || ''
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await readMultipartFormData(event)
+      if (!formData || formData.length === 0) {
+        throw createError({ statusCode: 400, message: 'No form data received' })
+      }
+
+      const field = (name: string) => formData.find(part => part.name === name)?.data?.toString() || ''
+      const botToken = field('botToken')
+      const userId = field('userId')
+      const packName = field('packName')
+      const packTitle = field('packTitle') || 'My Sticker Pack'
+      const emoji = field('emoji') || '🙂'
+
+      if (!botToken) throw createError({ statusCode: 400, message: 'Bot token is required' })
+      if (!userId) throw createError({ statusCode: 400, message: 'User ID is required' })
+      if (!packName) throw createError({ statusCode: 400, message: 'Pack name is required' })
+
+      const stickers = formData
+        .filter(part => part.name === 'stickers' && part.filename && part.data)
+        .map(part => {
+          const fileName = part.filename || 'sticker.webp'
+          const ext = path.extname(fileName).toLowerCase()
+          const format: 'static' | 'video' = ext === '.webm' ? 'video' : 'static'
+          return { name: fileName, buffer: Buffer.from(part.data), format }
+        })
+
+      if (stickers.length === 0) {
+        throw createError({ statusCode: 400, message: 'At least one sticker file is required' })
+      }
+
+      logger.info(`Starting browser multipart upload of ${stickers.length} stickers to Telegram`)
+      const results = await telegramService.batchUploadStickerBuffers(
+        botToken,
+        userId,
+        packName,
+        packTitle,
+        stickers,
+        emoji
+      )
+
+      return {
+        results: {
+          success: results.success.length,
+          failed: results.failed.length,
+          failedFiles: results.failed
+        },
+        packUrl: results.packUrl,
+        packName: results.packName
+      }
+    }
+
     const body = await readBody(event)
     const { botToken, userId, packName, packTitle, emoji, files } = body
 
@@ -28,7 +80,10 @@ export default defineEventHandler(async (event) => {
     const parseDataUrl = (dataUrl: string) => {
       const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/)
       if (!match) throw createError({ statusCode: 400, message: 'Invalid data URL file payload' })
-      return { mime: match[1], buffer: Buffer.from(match[2], 'base64') }
+      const mime = match[1]
+      const base64 = match[2]
+      if (!mime || !base64) throw createError({ statusCode: 400, message: 'Invalid data URL file payload' })
+      return { mime, buffer: Buffer.from(base64, 'base64') }
     }
 
     for (const file of files) {

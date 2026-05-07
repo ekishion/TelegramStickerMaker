@@ -30,5 +30,8 @@ Thumbs.db
 # Vercel
 .vercel/
 
+# Generated from @ffmpeg/core during postinstall
+public/vendor/ffmpeg/
+
 # Claude
 .claude/

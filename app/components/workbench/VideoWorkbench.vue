@@ -3,14 +3,14 @@
     <div class="workbench-panel">
       <div class="workbench-header">
         <div>
-          <strong>动态贴纸转换</strong>
-          <div class="text-secondary">GIF / MP4 / WEBM → WEBM VP9</div>
+          <strong>视频贴纸转换</strong>
+          <div class="text-secondary">GIF / MP4 / WEBM 转 Telegram WEBM VP9 视频贴纸</div>
         </div>
-        <div class="chip">默认 3 秒</div>
+        <div class="chip">最长 3 秒 / 最大 256KB</div>
       </div>
       <UploadZone
-        title="拖拽视频到此处"
-        hint="支持 GIF / MP4 / WEBM"
+        title="上传动图或视频"
+        hint="支持 GIF / MP4 / WEBM，浏览器本地转换，不上传源文件"
         accept="image/gif,video/mp4,video/webm"
         @files-selected="handleFilesSelected"
       />
@@ -20,7 +20,7 @@
       <div class="workbench-header">
         <strong>转换队列</strong>
         <div class="history-meta">
-          <span>总计 {{ tasks.length }}</span>
+          <span>总数 {{ tasks.length }}</span>
           <span>完成 {{ doneCount }}</span>
         </div>
       </div>
@@ -42,24 +42,25 @@
       <div class="task-list">
         <article v-for="task in tasks" :key="task.id" class="task-card">
           <div class="task-preview" @click="openPreview(task)">
-            <video :src="task.previewUrl" muted loop></video>
+            <video :src="task.result?.url || task.previewUrl" muted loop playsinline></video>
           </div>
           <div class="task-info">
             <strong class="task-name" :title="task.name">{{ task.name }}</strong>
             <div class="history-meta">
               <span>{{ formatFileSize(task.file.size) }}</span>
+              <span v-if="task.result">{{ formatFileSize(task.result.size) }}</span>
               <span class="chip">{{ statusText(task.status) }}</span>
             </div>
-            <div v-if="task.status === 'uploading' || task.status === 'converting'" class="task-progress">
+            <div v-if="task.status === 'converting'" class="task-progress">
               <div class="task-progress-bar">
-                <div class="task-progress-fill" :style="{ width: task.uploadProgress + '%' }"></div>
+                <div class="task-progress-fill" :style="{ width: task.progress + '%' }"></div>
               </div>
-              <span class="task-progress-label">{{ task.status === 'uploading' ? task.uploadProgress + '%' : '服务器处理中…' }}</span>
+              <span class="task-progress-label">{{ task.message || task.progress + '%' }}</span>
             </div>
             <div v-if="task.error" class="error-text">{{ task.error }}</div>
           </div>
           <div class="history-actions">
-            <button class="kv-action secondary" type="button" @click="convertSingle(task)" :disabled="task.status === 'uploading' || task.status === 'converting' || converting">转换</button>
+            <button class="kv-action secondary" type="button" @click="convertSingle(task)" :disabled="task.status === 'converting' || converting">转换</button>
             <button class="kv-action secondary" type="button" @click="downloadOne(task)" :disabled="!task.result">下载</button>
             <button class="kv-action secondary" type="button" @click="removeTask(task.id)">移除</button>
           </div>
@@ -75,10 +76,14 @@ import UploadZone from '@/components/ui/UploadZone.vue'
 import { useHistoryStore } from '@/stores/history'
 import { formatFileSize } from '@/utils/format'
 import { useLightbox } from '@/composables/useLightbox'
+import { convertVideoToTelegramSticker } from '@/utils/browserStickerConverter'
+import { saveCachedSticker } from '@/utils/browserStickerStore'
+import { TELEGRAM_STICKER_LIMITS } from '@/utils/telegramStickerRules'
 
 interface VideoTaskResult {
   filename: string
   url: string
+  cacheId: string
   width: number
   height: number
   duration: number
@@ -90,13 +95,19 @@ interface VideoTask {
   file: File
   name: string
   previewUrl: string
-  status: 'pending' | 'uploading' | 'converting' | 'done' | 'error'
-  uploadProgress: number
+  status: 'pending' | 'converting' | 'done' | 'error'
+  progress: number
+  message: string
   result: VideoTaskResult | null
   error: string
 }
 
-const statusText = (s: string) => ({ pending: '等待', uploading: '上传中', converting: '转换中', done: '完成', error: '失败' }[s] || s)
+const statusText = (status: VideoTask['status']) => ({
+  pending: '待转换',
+  converting: '转换中',
+  done: '已完成',
+  error: '失败'
+}[status])
 
 const tasks = ref<VideoTask[]>([])
 const limits = reactive({ maxVideoFiles: 100 })
@@ -116,75 +127,84 @@ const overallProgress = computed(() => {
 onMounted(async () => {
   try {
     const res = await fetch('/api/config')
-    if (res.ok) { const d = await res.json(); limits.maxVideoFiles = d.upload?.maxVideoFiles || limits.maxVideoFiles }
+    if (res.ok) {
+      const data = await res.json()
+      limits.maxVideoFiles = data.upload?.maxVideoFiles || limits.maxVideoFiles
+    }
   } catch {}
 })
 
-onBeforeUnmount(() => { tasks.value.forEach(t => { if (t.previewUrl) URL.revokeObjectURL(t.previewUrl) }) })
+onBeforeUnmount(() => {
+  tasks.value.forEach(task => {
+    URL.revokeObjectURL(task.previewUrl)
+    if (task.result?.url) URL.revokeObjectURL(task.result.url)
+  })
+})
 
-const pendingCount = computed(() => tasks.value.filter(t => t.status === 'pending').length)
-const doneCount = computed(() => tasks.value.filter(t => t.status === 'done').length)
+const pendingCount = computed(() => tasks.value.filter(task => task.status === 'pending').length)
+const doneCount = computed(() => tasks.value.filter(task => task.status === 'done').length)
 
 const handleFilesSelected = (files: File[]) => {
-  const valid = files.filter(f => ['image/gif', 'video/mp4', 'video/webm'].includes(f.type))
-  if (!valid.length) return
+  const valid = files.filter(file => ['image/gif', 'video/mp4', 'video/webm'].includes(file.type))
   valid.slice(0, limits.maxVideoFiles).forEach(file => {
     tasks.value.push({
       id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
       file,
       name: file.name,
       previewUrl: URL.createObjectURL(file),
-      status: 'pending',
-      uploadProgress: 0,
+      status: file.size > TELEGRAM_STICKER_LIMITS.maxSourceVideoBytes ? 'error' : 'pending',
+      progress: 0,
+      message: '',
       result: null,
-      error: ''
+      error: file.size > TELEGRAM_STICKER_LIMITS.maxSourceVideoBytes ? '源文件超过 50MB，请先裁剪后再转换' : ''
     })
   })
 }
 
 const convertSingle = async (task: VideoTask) => {
-  if (!task || task.status === 'uploading' || task.status === 'converting' || converting.value) return
+  if (task.status === 'converting') return
 
-  task.status = 'uploading'
-  task.uploadProgress = 0
+  task.status = 'converting'
+  task.progress = 5
+  task.message = '准备转换'
   task.error = ''
 
   try {
-    const formData = new FormData()
-    formData.append('video', task.file, task.name)
-
-    const data = await new Promise<any>((resolve, reject) => {
-      const xhr = new XMLHttpRequest()
-      xhr.open('POST', '/api/convert-video')
-      xhr.upload.onprogress = (e) => { if (e.lengthComputable) task.uploadProgress = Math.round((e.loaded / e.total) * 100) }
-      xhr.upload.onload = () => { task.status = 'converting'; task.uploadProgress = 100 }
-      xhr.onload = () => {
-        try { resolve(JSON.parse(xhr.responseText)) } catch { reject(new Error('响应解析失败')) }
-      }
-      xhr.onerror = () => reject(new Error('网络错误'))
-      xhr.send(formData)
+    const converted = await convertVideoToTelegramSticker(task.file, (progress, message) => {
+      task.progress = progress
+      task.message = message
+    })
+    const cache = await saveCachedSticker({
+      name: converted.fileName,
+      type: 'video',
+      mime: 'video/webm',
+      blob: converted.blob,
+      size: converted.size,
+      width: converted.width,
+      height: converted.height,
+      duration: converted.duration
     })
 
-    if (!data.result) throw new Error(data.message || '转换失败')
-
     task.status = 'done'
-    const outputUrl = data.result.dataUrl || `/api/telegram/file/${encodeURIComponent(data.result.filename)}`
+    task.progress = 100
+    task.message = '转换完成'
     task.result = {
-      filename: data.result.filename,
-      url: outputUrl,
-      width: data.result.width,
-      height: data.result.height,
-      duration: data.result.duration,
-      size: data.result.size
+      filename: converted.fileName,
+      url: converted.url,
+      cacheId: cache.id,
+      width: converted.width,
+      height: converted.height,
+      duration: converted.duration || TELEGRAM_STICKER_LIMITS.maxVideoDuration,
+      size: converted.size
     }
 
     historyStore.add({
       type: 'video',
-      fileName: task.name.replace(/\.[^.]+$/, ''),
-      preview: task.previewUrl,
-      duration: data.result.duration,
-      size: task.file.size,
-      result: { webm: outputUrl }
+      fileName: converted.fileName,
+      preview: `cache:${cache.id}`,
+      duration: task.result.duration,
+      size: converted.size,
+      result: { webm: `cache:${cache.id}` }
     })
   } catch (error: any) {
     task.status = 'error'
@@ -193,7 +213,7 @@ const convertSingle = async (task: VideoTask) => {
 }
 
 const convertAll = async () => {
-  const pending = tasks.value.filter(t => t.status === 'pending')
+  const pending = tasks.value.filter(task => task.status === 'pending')
   if (!pending.length) return
 
   converting.value = true
@@ -214,23 +234,29 @@ const downloadOne = (task: VideoTask) => {
   if (!task.result?.url) return
   const a = document.createElement('a')
   a.href = task.result.url
-  a.download = `${task.name.replace(/\.[^.]+$/, '')}.webm`
+  a.download = task.result.filename
   a.click()
 }
 
 const removeTask = (id: string) => {
-  const t = tasks.value.find(t => t.id === id)
-  if (t?.previewUrl) URL.revokeObjectURL(t.previewUrl)
-  tasks.value = tasks.value.filter(t => t.id !== id)
+  const task = tasks.value.find(item => item.id === id)
+  if (task) {
+    URL.revokeObjectURL(task.previewUrl)
+    if (task.result?.url) URL.revokeObjectURL(task.result.url)
+  }
+  tasks.value = tasks.value.filter(item => item.id !== id)
 }
 
 const clearAll = () => {
-  tasks.value.forEach(t => { if (t.previewUrl) URL.revokeObjectURL(t.previewUrl) })
+  tasks.value.forEach(task => {
+    URL.revokeObjectURL(task.previewUrl)
+    if (task.result?.url) URL.revokeObjectURL(task.result.url)
+  })
   tasks.value = []
 }
 
 const openPreview = (task: VideoTask) => {
-  lightbox.openVideo(task.previewUrl, task.name, formatFileSize(task.file.size))
+  lightbox.openVideo(task.result?.url || task.previewUrl, task.name, formatFileSize(task.result?.size || task.file.size))
 }
 </script>
 

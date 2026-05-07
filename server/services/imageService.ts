@@ -4,7 +4,7 @@ import path from 'path'
 import { config } from '../utils/config'
 import { logger } from '../utils/logger'
 import { safeDeleteFile } from '../utils/fileCleanup'
-import { sanitizeOutputBaseName } from '../utils/filename'
+import { generateTimestampHashBaseName } from '../utils/filename'
 
 export class ImageService {
   calculateDimensions(width: number, height: number) {
@@ -30,11 +30,9 @@ export class ImageService {
 
       const { newWidth, newHeight } = this.calculateDimensions(originalWidth, originalHeight)
 
-      const timestamp = Date.now()
-      const safeBaseName = sanitizeOutputBaseName(originalFilename)
-      const outputFilename = `${safeBaseName}-${timestamp}`
-      const pngPath = path.join(config.paths.temp, `${outputFilename}.png`)
-      const webpPath = path.join(config.paths.temp, `${outputFilename}.webp`)
+      const outputBaseName = generateTimestampHashBaseName(originalFilename)
+      const pngPath = path.join(config.paths.temp, `${outputBaseName}.png`)
+      const webpPath = path.join(config.paths.temp, `${outputBaseName}.webp`)
 
       await sharp(inputPath)
         .resize(newWidth, newHeight, { fit: 'fill' })
@@ -59,11 +57,11 @@ export class ImageService {
           width: newWidth,
           height: newHeight,
           png: {
-            filename: `${outputFilename}.png`,
+            filename: `${outputBaseName}.png`,
             size: pngStats.size
           },
           webp: {
-            filename: `${outputFilename}.webp`,
+            filename: `${outputBaseName}.webp`,
             size: webpStats.size
           }
         }

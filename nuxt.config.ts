@@ -18,9 +18,18 @@ export default defineNuxtConfig({
   nitro: {
     preset: 'vercel'
   },
+  routeRules: {
+    '/vendor/ffmpeg/**': {
+      headers: {
+        'Cache-Control': 'public, max-age=31536000, immutable',
+        'Cross-Origin-Resource-Policy': 'same-origin'
+      }
+    }
+  },
   vite: {
     optimizeDeps: {
-      include: ['@vue/devtools-core', '@vue/devtools-kit']
+      include: ['@vue/devtools-core', '@vue/devtools-kit'],
+      exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util', '@ffmpeg/core']
     }
   }
 })
