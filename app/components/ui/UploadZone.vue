@@ -13,12 +13,12 @@
       <div class="upload-zone-hint">{{ hint }}</div>
       <button class="kv-action secondary" type="button" @click.stop="openFilePicker">选择文件</button>
     </div>
-    <input ref="fileInput" type="file" :accept="accept" :multiple="multiple" style="display: none" @change="onFileChange" />
+    <input :id="inputId" ref="fileInput" name="uploadFiles" type="file" :accept="accept" :multiple="multiple" style="display: none" @change="onFileChange" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, useId } from 'vue'
 
 withDefaults(defineProps<{
   title?: string
@@ -38,6 +38,7 @@ const emit = defineEmits<{
 
 const isDragover = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
+const inputId = useId()
 
 const openFilePicker = () => {
   fileInput.value?.click()

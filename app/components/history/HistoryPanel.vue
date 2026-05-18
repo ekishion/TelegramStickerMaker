@@ -13,19 +13,19 @@
 
     <div class="history-toolbar">
       <div class="history-filters">
-        <input v-model="searchQuery" class="input-field" placeholder="搜索文件名 / 标签" />
-        <select v-model="typeFilter" class="select-field">
+        <input id="history-search" v-model="searchQuery" name="historySearch" class="input-field" placeholder="搜索文件名 / 标签" />
+        <select id="history-type-filter" v-model="typeFilter" name="historyTypeFilter" class="select-field">
           <option value="all">全部类型</option>
           <option value="image">静态贴纸</option>
-          <option value="video">动态贴纸</option>
+          <option value="video">视频贴纸</option>
         </select>
-        <select v-model="formatFilter" class="select-field">
+        <select id="history-format-filter" v-model="formatFilter" name="historyFormatFilter" class="select-field">
           <option value="all">全部格式</option>
           <option value="png">PNG</option>
           <option value="webp">WEBP</option>
           <option value="webm">WEBM</option>
         </select>
-        <select v-model="tagFilter" class="select-field">
+        <select id="history-tag-filter" v-model="tagFilter" name="historyTagFilter" class="select-field">
           <option value="all">全部标签</option>
           <option v-for="tag in availableTags" :key="tag" :value="tag">{{ tag }}</option>
         </select>
@@ -48,7 +48,7 @@
           <div class="history-group-title">{{ dateKey }}</div>
           <div class="history-group-divider"></div>
           <label class="chip">
-            <input type="checkbox" :checked="isGroupSelected(group)" @change="toggleGroup(group)" />
+            <input :id="`history-group-${dateKey}`" name="historyGroupSelect" type="checkbox" :checked="isGroupSelected(group)" @change="toggleGroup(group)" />
             本组全选
           </label>
         </div>
@@ -62,7 +62,7 @@
               <div class="history-info-header">
                 <strong class="history-name" :title="item.fileName">{{ item.fileName }}</strong>
                 <label class="chip">
-                  <input type="checkbox" :checked="selectedIds.includes(item.id)" @change="toggleSelect(item.id)" />
+                  <input :id="`history-select-${item.id}`" name="historyItemSelect" type="checkbox" :checked="selectedIds.includes(item.id)" @change="toggleSelect(item.id)" />
                   选择
                 </label>
               </div>
@@ -72,16 +72,18 @@
                 <span>{{ formatTimestamp(item.timestamp) }}</span>
               </div>
               <div class="history-meta">
-                <span class="chip">{{ item.type === 'image' ? '静态' : '动态' }}</span>
+                <span class="chip">{{ item.type === 'image' ? '静态' : '视频' }}</span>
                 <span v-if="item.result?.png" class="chip">PNG</span>
                 <span v-if="item.result?.webp" class="chip">WEBP</span>
                 <span v-if="item.result?.webm" class="chip">WEBM</span>
               </div>
               <input
+                :id="`history-tag-${item.id}`"
+                name="historyTag"
                 class="input-field history-tag-input"
                 :value="item.inputTag || ''"
                 placeholder="添加标签"
-                @change="(e: Event) => updateTag(item.id, (e.target as HTMLInputElement).value)"
+                @change="(event: Event) => updateTag(item.id, (event.target as HTMLInputElement).value)"
               />
             </div>
             <div class="history-actions">
@@ -150,45 +152,64 @@ const availableTags = computed(() => {
 })
 
 const filteredItems = computed(() => {
-  const q = searchQuery.value.trim().toLowerCase()
+  const query = searchQuery.value.trim().toLowerCase()
   return historyStore.items.filter((item: any) => {
-    const mq = !q || item.fileName.toLowerCase().includes(q) || (item.inputTag || '').includes(q)
-    const mt = typeFilter.value === 'all' || item.type === typeFilter.value
-    const mf = formatFilter.value === 'all' || (formatFilter.value === 'png' && item.result?.png) || (formatFilter.value === 'webp' && item.result?.webp) || (formatFilter.value === 'webm' && item.result?.webm)
-    const mtag = tagFilter.value === 'all' || item.inputTag === tagFilter.value
-    return mq && mt && mf && mtag
+    const matchQuery = !query || item.fileName.toLowerCase().includes(query) || (item.inputTag || '').includes(query)
+    const matchType = typeFilter.value === 'all' || item.type === typeFilter.value
+    const matchFormat =
+      formatFilter.value === 'all' ||
+      (formatFilter.value === 'png' && item.result?.png) ||
+      (formatFilter.value === 'webp' && item.result?.webp) ||
+      (formatFilter.value === 'webm' && item.result?.webm)
+    const matchTag = tagFilter.value === 'all' || item.inputTag === tagFilter.value
+    return matchQuery && matchType && matchFormat && matchTag
   })
 })
 
 const grouped = computed(() => groupByDay(filteredItems.value))
 
-const toggleSelect = (id: string) => { selectedIds.value = selectedIds.value.includes(id) ? selectedIds.value.filter(i => i !== id) : [...selectedIds.value, id] }
-const selectAll = () => { selectedIds.value = filteredItems.value.map((i: any) => i.id) }
+const toggleSelect = (id: string) => {
+  selectedIds.value = selectedIds.value.includes(id)
+    ? selectedIds.value.filter(item => item !== id)
+    : [...selectedIds.value, id]
+}
+const selectAll = () => { selectedIds.value = filteredItems.value.map((item: any) => item.id) }
 const clearSelection = () => { selectedIds.value = [] }
 
 const toggleGroup = (group: any[]) => {
-  const all = group.every((i: any) => selectedIds.value.includes(i.id))
-  selectedIds.value = all ? selectedIds.value.filter(id => !group.find((i: any) => i.id === id)) : [...selectedIds.value, ...group.filter((i: any) => !selectedIds.value.includes(i.id)).map((i: any) => i.id)]
+  const allSelected = group.every((item: any) => selectedIds.value.includes(item.id))
+  selectedIds.value = allSelected
+    ? selectedIds.value.filter(id => !group.find((item: any) => item.id === id))
+    : [...selectedIds.value, ...group.filter((item: any) => !selectedIds.value.includes(item.id)).map((item: any) => item.id)]
 }
 
-const isGroupSelected = (group: any[]) => group.every((i: any) => selectedIds.value.includes(i.id))
+const isGroupSelected = (group: any[]) => group.every((item: any) => selectedIds.value.includes(item.id))
 const updateTag = (id: string, tag: string) => { historyStore.updateTag(id, tag.trim()) }
 
+const downloadName = (fileName: string, format: string) => {
+  return fileName.toLowerCase().endsWith(`.${format}`) ? fileName : `${fileName}.${format}`
+}
+
 const downloadOne = (item: any, format: string) => {
-  const url = item.result?.[format]; if (!url) return
-  const a = document.createElement('a'); a.href = resolveUrl(url); a.download = `${item.fileName}.${format}`; a.click()
+  const url = item.result?.[format]
+  if (!url) return
+  const a = document.createElement('a')
+  a.href = resolveUrl(url)
+  a.download = downloadName(item.fileName, format)
+  a.click()
 }
 
 const toBatchFiles = (items: any[]) => items.flatMap(item => {
   const files: { url: string; name: string }[] = []
-  if (item.result?.png) files.push({ url: item.result.png, name: `${item.fileName}.png` })
-  if (item.result?.webp) files.push({ url: item.result.webp, name: `${item.fileName}.webp` })
-  if (item.result?.webm) files.push({ url: item.result.webm, name: `${item.fileName}.webm` })
+  if (item.result?.png) files.push({ url: item.result.png, name: downloadName(item.fileName, 'png') })
+  if (item.result?.webp) files.push({ url: item.result.webp, name: downloadName(item.fileName, 'webp') })
+  if (item.result?.webm) files.push({ url: item.result.webm, name: downloadName(item.fileName, 'webm') })
   return files
 })
 
 const downloadSelected = async () => {
-  const targets = historyStore.items.filter((i: any) => selectedIds.value.includes(i.id)); if (!targets.length) return
+  const targets = historyStore.items.filter((item: any) => selectedIds.value.includes(item.id))
+  if (!targets.length) return
   const files = toBatchFiles(targets)
   if (files.some(file => String(file.url).startsWith('data:') || String(file.url).startsWith('cache:'))) {
     files.forEach(file => {
@@ -199,15 +220,26 @@ const downloadSelected = async () => {
     })
     return
   }
-  const res = await fetch('/api/download-batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ files }) })
-  if (!res.ok) return; const blob = await res.blob(); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `history-${Date.now()}.zip`; a.click(); URL.revokeObjectURL(url)
+  const response = await fetch('/api/download-batch', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ files })
+  })
+  if (!response.ok) return
+  const blob = await response.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `history-${Date.now()}.zip`
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 const removeSelected = () => { historyStore.removeMany(selectedIds.value); selectedIds.value = [] }
 const clearHistory = () => { historyStore.clear(); selectedIds.value = [] }
 
 const openPreview = (item: any) => {
-  const meta = `${item.width}x${item.height} · ${formatFileSize(item.size || 0)}`
+  const meta = `${item.width}x${item.height} / ${formatFileSize(item.size || 0)}`
   if (item.type === 'image') {
     lightbox.openImage(resolveUrl(item.preview), item.fileName, meta)
   } else {

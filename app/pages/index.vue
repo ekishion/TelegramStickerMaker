@@ -28,7 +28,7 @@ import TelegramWorkbench from '@/components/workbench/TelegramWorkbench.vue'
 const tabs = computed(() => {
   const items = [
     { key: 'image', label: '静态贴纸' },
-    { key: 'video', label: '动态贴纸' },
+    { key: 'video', label: '视频贴纸' },
     { key: 'telegram', label: 'Telegram' },
     { key: 'history', label: '历史记录' }
   ]

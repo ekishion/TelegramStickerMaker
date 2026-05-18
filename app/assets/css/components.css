@@ -341,9 +341,15 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--gap-sm);
+  min-width: 0;
+}
+
+.history-info-header .chip {
+  flex: 0 0 auto;
 }
 
 .history-name {
+  flex: 1 1 auto;
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--color-text);
@@ -351,10 +357,14 @@
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
+  max-width: 100%;
 }
 
 .history-tag-input {
   margin-top: 2px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .history-actions {

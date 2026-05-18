@@ -12,23 +12,23 @@
       <div class="form-grid">
         <label class="form-item">
           <span>Bot Token</span>
-          <input v-model="botToken" class="input-field" placeholder="BotFather token" />
+          <input id="telegram-bot-token" v-model="botToken" name="botToken" class="input-field" placeholder="BotFather token" autocomplete="off" />
         </label>
         <label class="form-item">
           <span>用户 ID</span>
-          <input v-model="userId" class="input-field" placeholder="Telegram user id" />
+          <input id="telegram-user-id" v-model="userId" name="telegramUserId" class="input-field" placeholder="Telegram user id" autocomplete="off" />
         </label>
         <label class="form-item">
           <span>贴纸包短名</span>
-          <input v-model="packName" class="input-field" placeholder="pack_name" />
+          <input id="telegram-pack-name" v-model="packName" name="packName" class="input-field" placeholder="pack_name" autocomplete="off" />
         </label>
         <label class="form-item">
           <span>贴纸包标题</span>
-          <input v-model="packTitle" class="input-field" placeholder="Sticker Pack Title" />
+          <input id="telegram-pack-title" v-model="packTitle" name="packTitle" class="input-field" placeholder="Sticker Pack Title" autocomplete="off" />
         </label>
         <label class="form-item">
           <span>默认 Emoji</span>
-          <input v-model="emoji" class="input-field" placeholder="🙂" />
+          <input id="telegram-emoji" v-model="emoji" name="emoji" class="input-field" placeholder="🙂" autocomplete="off" />
         </label>
       </div>
 
