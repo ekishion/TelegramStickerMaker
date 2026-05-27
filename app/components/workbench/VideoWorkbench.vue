@@ -1,12 +1,18 @@
 <template>
-  <div class="section-stack">
-    <div class="workbench-panel">
-      <div class="workbench-header">
-        <div>
-          <strong>视频贴纸转换</strong>
-          <div class="text-secondary">GIF / MP4 / WEBM 转 Telegram WEBM VP9 视频贴纸</div>
+  <div class="tg-workbench">
+    <!-- Upload section -->
+    <div class="tg-section">
+      <div class="tg-section-head">
+        <div class="tg-section-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><polygon points="5 3 19 12 5 21 5 3"/></svg>
         </div>
-        <div class="chip">最长 3 秒 / 最大 256KB</div>
+        <div>
+          <h3 class="tg-section-title">视频贴纸转换</h3>
+          <p class="tg-section-desc">GIF / MP4 / WEBM 转 Telegram WEBM VP9 视频贴纸</p>
+        </div>
+        <div class="tg-section-right">
+          <span class="tg-count">最长 3 秒 / 256KB</span>
+        </div>
       </div>
       <UploadZone
         title="上传动图或视频"
@@ -16,55 +22,74 @@
       />
     </div>
 
-    <div v-if="tasks.length" class="workbench-panel">
-      <div class="workbench-header">
-        <strong>转换队列</strong>
-        <div class="history-meta">
-          <span>总数 {{ tasks.length }}</span>
-          <span>完成 {{ doneCount }}</span>
+    <!-- Queue section -->
+    <div v-if="tasks.length" class="tg-section">
+      <div class="tg-section-head">
+        <div class="tg-section-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
         </div>
-      </div>
-      <div class="workbench-actions">
-        <button class="kv-action" type="button" @click="convertAll" :disabled="pendingCount === 0 || converting">全部转换</button>
-        <button class="kv-action secondary" type="button" @click="clearAll">清空</button>
+        <div>
+          <h3 class="tg-section-title">转换队列</h3>
+          <p class="tg-section-desc">{{ doneCount }}/{{ tasks.length }} 已完成</p>
+        </div>
+        <div class="tg-section-right">
+          <span class="tg-count">{{ pendingCount }} 待处理</span>
+        </div>
       </div>
 
-      <div v-if="converting" class="convert-progress">
-        <div class="task-progress-bar">
-          <div class="task-progress-fill" :style="{ width: overallProgress + '%' }"></div>
+      <!-- Overall batch progress -->
+      <div v-if="converting" class="tg-batch-progress">
+        <div class="tg-batch-bar">
+          <div class="tg-batch-fill" :style="{ width: overallProgress + '%' }"></div>
         </div>
-        <div class="history-meta">
+        <div class="tg-batch-info">
           <span>{{ convertStatus }}</span>
           <span>{{ overallProgress }}%</span>
         </div>
       </div>
 
-      <div class="task-list">
-        <article v-for="task in tasks" :key="task.id" class="task-card">
-          <div class="task-preview" @click="openPreview(task)">
+      <!-- Task gallery -->
+      <div class="tg-gallery">
+        <div v-for="task in tasks" :key="task.id" class="tg-task-item" :class="task.status">
+          <div class="tg-task-preview" @click="openPreview(task)">
             <video :src="task.result?.url || task.previewUrl" muted loop playsinline></video>
+            <span class="tg-task-badge" :class="task.status">{{ statusText(task.status) }}</span>
+            <div v-if="task.status === 'converting'" class="tg-task-progress-ring">
+              <svg viewBox="0 0 36 36">
+                <circle cx="18" cy="18" r="15" fill="none" stroke="var(--color-border)" stroke-width="3" />
+                <circle cx="18" cy="18" r="15" fill="none" stroke="var(--color-accent)" stroke-width="3"
+                  stroke-dasharray="94" :stroke-dashoffset="94 - (94 * task.progress / 100)"
+                  stroke-linecap="round" transform="rotate(-90 18 18)" />
+              </svg>
+              <span class="tg-task-progress-text">{{ task.progress }}%</span>
+            </div>
           </div>
-          <div class="task-info">
-            <strong class="task-name" :title="task.name">{{ task.name }}</strong>
-            <div class="history-meta">
+          <div class="tg-task-info">
+            <div class="tg-task-name" :title="task.name">{{ task.name }}</div>
+            <div class="tg-task-meta">
               <span>{{ formatFileSize(task.file.size) }}</span>
               <span v-if="task.result">{{ formatFileSize(task.result.size) }}</span>
-              <span class="chip">{{ statusText(task.status) }}</span>
             </div>
-            <div v-if="task.status === 'converting'" class="task-progress">
-              <div class="task-progress-bar">
-                <div class="task-progress-fill" :style="{ width: task.progress + '%' }"></div>
-              </div>
-              <span class="task-progress-label">{{ task.message || task.progress + '%' }}</span>
-            </div>
-            <div v-if="task.error" class="error-text">{{ task.error }}</div>
+            <div v-if="task.status === 'converting' && task.message" class="tg-task-message">{{ task.message }}</div>
+            <div v-if="task.error" class="tg-task-error">{{ task.error }}</div>
           </div>
-          <div class="history-actions">
-            <button class="kv-action secondary" type="button" @click="convertSingle(task)" :disabled="task.status === 'converting' || converting">转换</button>
-            <button class="kv-action secondary" type="button" @click="downloadOne(task)" :disabled="!task.result">下载</button>
-            <button class="kv-action secondary" type="button" @click="removeTask(task.id)">移除</button>
+          <div class="tg-task-actions">
+            <button class="tg-btn-ghost" type="button" @click="convertSingle(task)" :disabled="task.status === 'converting' || converting">转换</button>
+            <button class="tg-btn-ghost" type="button" @click="downloadOne(task)" :disabled="!task.result">下载</button>
+            <button class="tg-btn-ghost tg-btn-danger" type="button" @click="removeTask(task.id)">移除</button>
           </div>
-        </article>
+        </div>
+      </div>
+
+      <!-- Action bar -->
+      <div class="tg-upload-bar">
+        <button class="tg-btn-outline" type="button" @click="convertAll" :disabled="pendingCount === 0 || converting">
+          全部转换
+        </button>
+        <div class="tg-upload-bar-info">
+          <button class="tg-btn-ghost" type="button" @click="downloadAll" :disabled="doneCount === 0">全部下载</button>
+          <button class="tg-btn-ghost tg-btn-danger" type="button" @click="clearAll">清空</button>
+        </div>
       </div>
     </div>
   </div>
@@ -238,6 +263,12 @@ const downloadOne = (task: VideoTask) => {
   a.click()
 }
 
+const downloadAll = () => {
+  for (const task of tasks.value.filter(item => item.status === 'done' && item.result?.url)) {
+    downloadOne(task)
+  }
+}
+
 const removeTask = (id: string) => {
   const task = tasks.value.find(item => item.id === id)
   if (task) {
@@ -261,29 +292,143 @@ const openPreview = (task: VideoTask) => {
 </script>
 
 <style scoped>
-.convert-progress {
-  margin-top: var(--gap-md);
+.tg-workbench { display: grid; gap: var(--gap-lg); }
+
+.tg-section {
+  display: grid;
+  gap: var(--gap-md);
+  padding: 20px;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
 }
-.task-progress {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+
+.tg-section-head { display: flex; align-items: flex-start; gap: 12px; }
+.tg-section-icon {
+  width: 36px; height: 36px; border-radius: var(--radius-sm);
+  background: var(--color-accent-light); color: var(--color-accent);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
-.task-progress-bar {
-  flex: 1;
-  height: 4px;
-  background: var(--color-border);
-  border-radius: var(--radius-full);
+.tg-section-title { font-size: 0.95rem; font-weight: 600; color: var(--color-text); line-height: 1.3; }
+.tg-section-desc { font-size: 0.78rem; color: var(--color-text-tertiary); margin-top: 2px; }
+.tg-section-right { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+.tg-count {
+  font-size: 0.75rem; font-weight: 600; color: var(--color-accent);
+  padding: 2px 8px; background: var(--color-accent-light); border-radius: var(--radius-full);
+}
+
+/* Batch progress */
+.tg-batch-progress {
+  display: grid; gap: 6px;
+  padding: 10px 12px; border-radius: var(--radius-md);
+  background: var(--color-bg-subtle);
+}
+.tg-batch-bar {
+  width: 100%; height: 4px;
+  background: var(--color-border); border-radius: var(--radius-full);
   overflow: hidden;
 }
-.task-progress-fill {
-  height: 100%;
-  background: var(--color-accent);
-  transition: width 0.2s ease;
+.tg-batch-fill {
+  height: 100%; background: var(--color-accent);
+  transition: width 0.3s ease; border-radius: var(--radius-full);
 }
-.task-progress-label {
-  font-size: 0.7rem;
-  color: var(--color-text-tertiary);
-  white-space: nowrap;
+.tg-batch-info {
+  display: flex; justify-content: space-between;
+  font-size: 0.7rem; color: var(--color-text-tertiary);
+}
+
+/* Gallery */
+.tg-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+
+.tg-task-item {
+  padding: 10px; border-radius: var(--radius-md); background: var(--color-bg-subtle);
+  display: grid; gap: 6px;
+}
+.tg-task-item.done { background: var(--color-success-light); }
+.tg-task-item.error { background: var(--color-error-light); }
+
+.tg-task-preview {
+  position: relative; width: 100%; aspect-ratio: 1;
+  border-radius: var(--radius-sm); overflow: hidden; background: var(--color-surface);
+  cursor: pointer;
+}
+.tg-task-preview video { width: 100%; height: 100%; object-fit: contain; }
+
+.tg-task-badge {
+  position: absolute; left: 4px; top: 4px;
+  font-size: 0.6rem; font-weight: 700; padding: 2px 6px;
+  border-radius: 4px; color: #fff;
+}
+.tg-task-badge.pending { background: var(--color-text-tertiary); }
+.tg-task-badge.converting { background: var(--color-accent); }
+.tg-task-badge.done { background: var(--color-success); }
+.tg-task-badge.error { background: var(--color-error); }
+
+.tg-task-progress-ring {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.4);
+}
+.tg-task-progress-ring svg { width: 36px; height: 36px; }
+.tg-task-progress-ring circle { transition: stroke-dashoffset 0.3s ease; }
+.tg-task-progress-text {
+  position: absolute; font-size: 0.6rem; font-weight: 700; color: #fff;
+}
+
+.tg-task-info { padding: 0 2px; }
+.tg-task-name {
+  font-size: 0.72rem; font-weight: 600; color: var(--color-text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tg-task-meta {
+  display: flex; gap: 6px; font-size: 0.65rem; color: var(--color-text-tertiary);
+}
+.tg-task-message {
+  font-size: 0.62rem; color: var(--color-accent); margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tg-task-error {
+  font-size: 0.62rem; color: var(--color-error); margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.tg-task-actions {
+  display: flex; gap: 4px; flex-wrap: wrap;
+}
+
+/* Buttons */
+.tg-btn-ghost {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 8px; border-radius: var(--radius-sm); border: none;
+  background: transparent; color: var(--color-text-secondary);
+  font-size: 0.7rem; font-weight: 500; font-family: var(--font-sans);
+  cursor: pointer; transition: all 0.15s ease;
+}
+.tg-btn-ghost:hover:not(:disabled) { background: var(--color-surface); color: var(--color-text); }
+.tg-btn-ghost:disabled { opacity: 0.4; cursor: not-allowed; }
+.tg-btn-danger:hover:not(:disabled) { color: var(--color-error); background: var(--color-error-light); }
+
+.tg-btn-outline {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: var(--radius-full);
+  border: 1px solid var(--color-border); background: transparent;
+  color: var(--color-text-secondary); font-size: 0.8rem; font-weight: 600;
+  font-family: var(--font-sans); cursor: pointer; transition: all 0.15s ease; min-height: 38px;
+}
+.tg-btn-outline:hover:not(:disabled) { border-color: var(--color-accent); color: var(--color-accent); background: var(--color-accent-light); }
+.tg-btn-outline:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.tg-upload-bar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 0 0; border-top: 1px solid var(--color-border);
+}
+.tg-upload-bar-info { flex: 1; display: flex; gap: 6px; flex-wrap: wrap; }
+
+@media (max-width: 600px) {
+  .tg-section { padding: 14px; border-radius: var(--radius-md); }
+  .tg-section-icon { width: 30px; height: 30px; }
+  .tg-section-icon svg { width: 15px; height: 15px; }
+  .tg-section-title { font-size: 0.88rem; }
+  .tg-gallery { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+  .tg-task-actions { gap: 3px; }
+  .tg-btn-ghost { padding: 3px 6px; font-size: 0.65rem; }
 }
 </style>

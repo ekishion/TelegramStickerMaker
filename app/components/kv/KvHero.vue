@@ -68,18 +68,18 @@
 </template>
 
 <script setup lang="ts">
+const emit = defineEmits<{
+  'switch-tab': [key: string]
+}>()
+
 const scrollToWorkbench = () => {
-  const el = document.querySelector('.workbench-shell')
-  el?.scrollIntoView({ behavior: 'smooth' })
+  document.querySelector('.workbench-shell')?.scrollIntoView({ behavior: 'smooth' })
 }
 
 const goToHistory = () => {
-  const tabs = document.querySelectorAll('.segmented-tabs button')
-  const historyTab = Array.from(tabs).find(btn => btn.textContent?.trim() === '历史记录')
-  if (historyTab) (historyTab as HTMLButtonElement).click()
+  emit('switch-tab', 'history')
   setTimeout(() => {
-    const el = document.querySelector('.workbench-shell')
-    el?.scrollIntoView({ behavior: 'smooth' })
+    document.querySelector('.workbench-shell')?.scrollIntoView({ behavior: 'smooth' })
   }, 50)
 }
 </script>

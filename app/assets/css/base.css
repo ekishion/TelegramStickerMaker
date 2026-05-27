@@ -57,4 +57,18 @@ button {
   body {
     overflow-x: hidden;
   }
+
+  /* Better touch feedback on mobile */
+  button,
+  .file-item,
+  .pack-history-chip,
+  .upload-zone {
+    -webkit-tap-highlight-color: transparent;
+    tap-highlight-color: transparent;
+  }
+
+  button:active:not(:disabled) {
+    transform: scale(0.97);
+    opacity: 0.85;
+  }
 }

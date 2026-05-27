@@ -1,6 +1,7 @@
 .page-shell {
   position: relative;
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--color-bg);
 }
 
@@ -8,6 +9,9 @@
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 32px 120px;
+  padding-left: max(32px, env(safe-area-inset-left));
+  padding-right: max(32px, env(safe-area-inset-right));
+  padding-bottom: max(120px, calc(80px + env(safe-area-inset-bottom)));
 }
 
 /* Nav - Miuix glass style */
@@ -71,6 +75,9 @@
 @media (max-width: 960px) {
   .kv-container {
     padding: 0 24px 80px;
+    padding-left: max(24px, env(safe-area-inset-left));
+    padding-right: max(24px, env(safe-area-inset-right));
+    padding-bottom: max(80px, calc(60px + env(safe-area-inset-bottom)));
   }
 
   .section-grid {
@@ -86,6 +93,9 @@
 @media (max-width: 600px) {
   .kv-container {
     padding: 0 12px 60px;
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-bottom: max(60px, calc(40px + env(safe-area-inset-bottom)));
   }
 
   .nav-bar {
@@ -93,6 +103,8 @@
     margin-bottom: var(--gap-md);
     top: 8px;
     border-radius: var(--radius-md);
+    margin-left: max(0px, calc(env(safe-area-inset-left) - 12px));
+    margin-right: max(0px, calc(env(safe-area-inset-right) - 12px));
   }
 
   .nav-mark {
@@ -116,5 +128,8 @@
 @media (max-width: 380px) {
   .kv-container {
     padding: 0 8px 48px;
+    padding-left: max(8px, env(safe-area-inset-left));
+    padding-right: max(8px, env(safe-area-inset-right));
+    padding-bottom: max(48px, calc(32px + env(safe-area-inset-bottom)));
   }
 }

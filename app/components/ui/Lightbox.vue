@@ -175,10 +175,22 @@ defineExpose({ open, close })
 
 @media (max-width: 480px) {
   .lightbox-overlay {
-    padding: 12px;
+    padding: 8px;
+    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
   }
   .lightbox-info strong {
     font-size: 0.8rem;
+  }
+  .lightbox-meta {
+    display: none;
+  }
+  .lightbox-btn {
+    width: 44px;
+    height: 44px;
+  }
+  .lightbox-media {
+    max-height: calc(100dvh - 60px);
+    border-radius: var(--radius-md);
   }
 }
 </style>

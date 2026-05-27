@@ -3,13 +3,23 @@
     <div class="kv-container">
       <header class="nav-bar">
         <div class="nav-brand">
-          <img class="nav-mark" src="/icon.png" alt="Logo" />
-          <div>
-            <div class="nav-title">Telegram Sticker Maker</div>
-            <div class="nav-subtitle">贴纸制作与上传工具</div>
-          </div>
+          <NuxtLink to="/" class="nav-brand-link">
+            <img class="nav-mark" src="/icon.png" alt="Logo" />
+            <div>
+              <div class="nav-title">Telegram Sticker Maker</div>
+              <div class="nav-subtitle">贴纸制作与上传工具</div>
+            </div>
+          </NuxtLink>
         </div>
         <div class="nav-right">
+          <NuxtLink v-if="isDash" to="/" class="nav-back">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+            首页
+          </NuxtLink>
+          <NuxtLink v-else to="/dash" class="nav-enter">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            工作台
+          </NuxtLink>
           <button class="theme-toggle" type="button" @click="cycleTheme" :aria-label="themeLabel">
             <svg v-if="theme === 'system'" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
@@ -45,10 +55,13 @@ import { ref, computed, onMounted } from 'vue'
 import Lightbox from '@/components/ui/Lightbox.vue'
 import { useLightbox } from '@/composables/useLightbox'
 
+const route = useRoute()
 const lightboxRef = ref()
 const { setRef } = useLightbox()
 
 onMounted(() => { setRef(lightboxRef.value) })
+
+const isDash = computed(() => route.path === '/dash')
 
 type ThemeMode = 'system' | 'light' | 'dark'
 
@@ -82,7 +95,6 @@ onMounted(() => {
   theme.value = saved && ['system', 'light', 'dark'].includes(saved) ? saved : 'system'
   applyTheme(theme.value)
 
-  // Listen for system theme changes when in system mode
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
     if (theme.value === 'system') applyTheme('system')
   })
@@ -93,7 +105,41 @@ onMounted(() => {
 .nav-right {
   display: flex;
   align-items: center;
+  gap: 8px;
+}
+
+.nav-brand-link {
+  display: flex;
+  align-items: center;
   gap: var(--gap-sm);
+  text-decoration: none;
+  color: inherit;
+  min-width: 0;
+}
+
+.nav-back,
+.nav-enter {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  text-decoration: none;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.nav-back:hover,
+.nav-enter:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  background: var(--color-accent-light);
 }
 
 .theme-toggle {
@@ -133,6 +179,14 @@ onMounted(() => {
   }
   .theme-toggle {
     padding: 8px;
+  }
+  .nav-back span,
+  .nav-enter span {
+    display: none;
+  }
+  .nav-back,
+  .nav-enter {
+    padding: 6px 8px;
   }
 }
 </style>
