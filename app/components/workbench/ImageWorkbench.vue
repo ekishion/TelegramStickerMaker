@@ -40,31 +40,37 @@
       <!-- Task gallery -->
       <div class="tg-gallery">
         <div v-for="task in tasks" :key="task.id" class="tg-task-item" :class="task.status">
-          <div class="tg-task-preview" @click="openPreview(task)">
-            <img :src="task.previewUrl" :alt="task.name" />
-            <span class="tg-task-badge" :class="task.status">{{ statusText(task.status) }}</span>
-            <div v-if="task.status === 'converting'" class="tg-task-progress-ring">
-              <svg viewBox="0 0 36 36">
-                <circle cx="18" cy="18" r="15" fill="none" stroke="var(--color-border)" stroke-width="3" />
-                <circle cx="18" cy="18" r="15" fill="none" stroke="var(--color-accent)" stroke-width="3"
-                  stroke-dasharray="94" :stroke-dashoffset="94 - (94 * task.progress / 100)"
-                  stroke-linecap="round" transform="rotate(-90 18 18)" />
-              </svg>
-              <span class="tg-task-progress-text">{{ task.progress }}%</span>
+          <div class="tg-task-shell">
+            <div class="tg-task-preview" @click="openPreview(task)">
+              <div class="tg-task-media">
+                <img :src="task.previewUrl" :alt="task.name" />
+              </div>
+              <span class="tg-task-badge" :class="task.status">{{ statusText(task.status) }}</span>
+              <div v-if="task.status === 'converting'" class="tg-task-progress-ring">
+                <svg viewBox="0 0 36 36">
+                  <circle cx="18" cy="18" r="15" fill="none" stroke="var(--color-border)" stroke-width="3" />
+                  <circle cx="18" cy="18" r="15" fill="none" stroke="var(--color-accent)" stroke-width="3"
+                    stroke-dasharray="94" :stroke-dashoffset="94 - (94 * task.progress / 100)"
+                    stroke-linecap="round" transform="rotate(-90 18 18)" />
+                </svg>
+                <span class="tg-task-progress-text">{{ task.progress }}%</span>
+              </div>
             </div>
-          </div>
-          <div class="tg-task-info">
-            <div class="tg-task-name" :title="task.name">{{ task.name }}</div>
-            <div class="tg-task-meta">
-              <span v-if="task.width">{{ task.width }}x{{ task.height }}</span>
-              <span>{{ formatFileSize(task.file.size) }}</span>
+            <div class="tg-task-body">
+              <div class="tg-task-info">
+                <div class="tg-task-name" :title="task.name">{{ task.name }}</div>
+                <div class="tg-task-meta">
+                  <span v-if="task.width">{{ task.width }}x{{ task.height }}</span>
+                  <span>{{ formatFileSize(task.file.size) }}</span>
+                </div>
+              </div>
+              <div class="tg-task-actions">
+                <button class="tg-btn-ghost" type="button" @click="convertSingle(task)" :disabled="task.status === 'converting'">转换</button>
+                <button class="tg-btn-ghost" type="button" @click="downloadOne(task, 'png')" :disabled="!task.result?.png">PNG</button>
+                <button class="tg-btn-ghost" type="button" @click="downloadOne(task, 'webp')" :disabled="!task.result?.webp">WEBP</button>
+                <button class="tg-btn-ghost tg-btn-danger" type="button" @click="removeTask(task.id)">移除</button>
+              </div>
             </div>
-          </div>
-          <div class="tg-task-actions">
-            <button class="tg-btn-ghost" type="button" @click="convertSingle(task)" :disabled="task.status === 'converting'">转换</button>
-            <button class="tg-btn-ghost" type="button" @click="downloadOne(task, 'png')" :disabled="!task.result?.png">PNG</button>
-            <button class="tg-btn-ghost" type="button" @click="downloadOne(task, 'webp')" :disabled="!task.result?.webp">WEBP</button>
-            <button class="tg-btn-ghost tg-btn-danger" type="button" @click="removeTask(task.id)">移除</button>
           </div>
         </div>
       </div>
@@ -271,6 +277,8 @@ const openPreview = (task: ImageTask) => {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap');
+
 .tg-workbench { display: grid; gap: var(--gap-lg); }
 
 .tg-section {
@@ -296,66 +304,170 @@ const openPreview = (task: ImageTask) => {
 }
 
 /* Gallery */
-.tg-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+.tg-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 14px;
+}
 
 .tg-task-item {
-  padding: 10px; border-radius: var(--radius-md); background: var(--color-bg-subtle);
-  display: grid; gap: 6px;
+  --task-accent: var(--color-text-tertiary);
+  position: relative;
+  min-width: 0;
+  font-family: "Manrope", "Noto Sans SC", sans-serif;
 }
-.tg-task-item.done { background: var(--color-success-light); }
-.tg-task-item.error { background: var(--color-error-light); }
+.tg-task-item.converting { --task-accent: var(--color-accent); }
+.tg-task-item.done { --task-accent: var(--color-success); }
+.tg-task-item.error { --task-accent: var(--color-error); }
+
+.tg-task-shell {
+  border-radius: 18px;
+  padding: 1px;
+  background: linear-gradient(145deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.02));
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tg-task-item:hover .tg-task-shell {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.14);
+}
 
 .tg-task-preview {
-  position: relative; width: 100%; aspect-ratio: 1;
-  border-radius: var(--radius-sm); overflow: hidden; background: var(--color-surface);
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 17px 17px 12px 12px;
+  padding: 10px;
   cursor: pointer;
+  background:
+    radial-gradient(120% 120% at 0% 0%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.4) 60%),
+    linear-gradient(160deg, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0));
+  border: 1px solid rgba(0, 0, 0, 0.05);
 }
-.tg-task-preview img { width: 100%; height: 100%; object-fit: contain; }
+
+.tg-task-media {
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  background-color: #f3f2ee;
+  background-image:
+    linear-gradient(45deg, rgba(0, 0, 0, 0.05) 25%, transparent 25%, transparent 75%, rgba(0, 0, 0, 0.05) 75%, rgba(0, 0, 0, 0.05)),
+    linear-gradient(45deg, rgba(0, 0, 0, 0.05) 25%, transparent 25%, transparent 75%, rgba(0, 0, 0, 0.05) 75%, rgba(0, 0, 0, 0.05));
+  background-position: 0 0, 10px 10px;
+  background-size: 20px 20px;
+}
+
+.tg-task-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
 
 .tg-task-badge {
-  position: absolute; left: 4px; top: 4px;
-  font-size: 0.6rem; font-weight: 700; padding: 2px 6px;
-  border-radius: 4px; color: #fff;
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(10, 10, 10, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(6px);
 }
-.tg-task-badge.pending { background: var(--color-text-tertiary); }
-.tg-task-badge.converting { background: var(--color-accent); }
-.tg-task-badge.done { background: var(--color-success); }
-.tg-task-badge.error { background: var(--color-error); }
+.tg-task-badge.pending { background: rgba(44, 44, 44, 0.68); }
+.tg-task-badge.converting { background: rgba(33, 150, 243, 0.82); }
+.tg-task-badge.done { background: rgba(41, 177, 93, 0.82); }
+.tg-task-badge.error { background: rgba(232, 78, 60, 0.82); }
 
 .tg-task-progress-ring {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  background: rgba(0,0,0,0.4);
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 17px 17px 12px 12px;
 }
-.tg-task-progress-ring svg { width: 36px; height: 36px; }
+.tg-task-progress-ring svg { width: 38px; height: 38px; }
 .tg-task-progress-ring circle { transition: stroke-dashoffset 0.3s ease; }
 .tg-task-progress-text {
-  position: absolute; font-size: 0.6rem; font-weight: 700; color: #fff;
+  position: absolute; font-size: 0.62rem; font-weight: 700; color: #fff;
 }
 
-.tg-task-info { padding: 0 2px; }
+.tg-task-body {
+  display: grid;
+  gap: 10px;
+  padding: 12px 12px 14px;
+  background: var(--color-surface);
+  border-radius: 0 0 17px 17px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.tg-task-info { display: grid; gap: 6px; }
 .tg-task-name {
-  font-size: 0.72rem; font-weight: 600; color: var(--color-text);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .tg-task-meta {
-  display: flex; gap: 6px; font-size: 0.65rem; color: var(--color-text-tertiary);
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.tg-task-meta span {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .tg-task-actions {
-  display: flex; gap: 4px; flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+  gap: 6px;
 }
 
 /* Buttons */
 .tg-btn-ghost {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 4px 8px; border-radius: var(--radius-sm); border: none;
-  background: transparent; color: var(--color-text-secondary);
-  font-size: 0.7rem; font-weight: 500; font-family: var(--font-sans);
-  cursor: pointer; transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: #fff;
+  color: #1f1f1f;
+  font-size: 0.7rem;
+  font-weight: 600;
+  font-family: "Manrope", "Noto Sans SC", sans-serif;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
-.tg-btn-ghost:hover:not(:disabled) { background: var(--color-surface); color: var(--color-text); }
-.tg-btn-ghost:disabled { opacity: 0.4; cursor: not-allowed; }
-.tg-btn-danger:hover:not(:disabled) { color: var(--color-error); background: var(--color-error-light); }
+.tg-btn-ghost:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+  border-color: rgba(0, 0, 0, 0.18);
+}
+.tg-btn-ghost:disabled { opacity: 0.45; cursor: not-allowed; }
+.tg-btn-danger {
+  color: #b7271d;
+  border-color: rgba(231, 76, 60, 0.35);
+  background: rgba(231, 76, 60, 0.1);
+}
+.tg-btn-danger:hover:not(:disabled) {
+  color: #fff;
+  background: rgba(231, 76, 60, 0.9);
+  border-color: rgba(231, 76, 60, 0.9);
+}
 
 .tg-btn-outline {
   display: inline-flex; align-items: center; gap: 6px;

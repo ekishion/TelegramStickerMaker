@@ -33,12 +33,12 @@
     </div>
 
     <!-- Empty state -->
-    <div v-if="filteredItems.length === 0" class="tg-section tg-empty">
-      <div class="tg-empty-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="48" height="48"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <div v-if="filteredItems.length === 0" class="tg-section">
+      <div class="tg-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32" height="32"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        <span>暂无记录</span>
+        <span class="tg-empty-hint">完成一次贴纸输出后会自动归档到这里</span>
       </div>
-      <div class="tg-empty-title">暂无记录</div>
-      <div class="tg-empty-desc">完成一次贴纸输出后会自动归档到这里</div>
     </div>
 
     <!-- Grouped items -->
@@ -327,12 +327,23 @@ const openPreview = (item: any) => {
 
 /* Empty state */
 .tg-empty {
-  text-align: center; padding: 48px 20px;
-  justify-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px 16px;
+  color: var(--color-text-tertiary);
+  text-align: center;
 }
-.tg-empty-icon { color: var(--color-text-tertiary); opacity: 0.5; }
-.tg-empty-title { font-size: 1rem; font-weight: 600; color: var(--color-text); margin-top: 12px; }
-.tg-empty-desc { font-size: 0.82rem; color: var(--color-text-tertiary); margin-top: 4px; }
+
+.tg-empty svg { opacity: 0.4; }
+
+.tg-empty span { font-size: 0.85rem; }
+
+.tg-empty-hint {
+  font-size: 0.75rem !important;
+  opacity: 0.7;
+}
 
 /* Gallery */
 .tg-gallery {
