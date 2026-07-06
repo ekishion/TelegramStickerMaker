@@ -4,6 +4,12 @@ import { logger } from '../utils/logger'
 
 const TELEGRAM_API_BASE = 'https://api.telegram.org/bot'
 
+function summarizeTelegramResult(result: any) {
+  if (!result || typeof result !== 'object') return 'invalid'
+  if (result.ok) return 'ok'
+  return `error: ${String(result.description || 'unknown').slice(0, 200)}`
+}
+
 async function parseResponse(response: Response, method: string) {
   let responseText: string
   try {
@@ -13,16 +19,17 @@ async function parseResponse(response: Response, method: string) {
     return { ok: false, description: `Failed to read response: ${textError.message}` }
   }
 
-  logger.info(`Telegram API ${method} response (status: ${response.status}): ${responseText.substring(0, 500)}`)
-
   if (!responseText || responseText.trim() === '') {
+    logger.warn(`Telegram API ${method} response (status: ${response.status}): empty`)
     return { ok: false, description: `Empty response from Telegram (HTTP ${response.status})` }
   }
 
   try {
-    return JSON.parse(responseText)
+    const parsed = JSON.parse(responseText)
+    logger.info(`Telegram API ${method} response (status: ${response.status}): ${summarizeTelegramResult(parsed)}`)
+    return parsed
   } catch {
-    logger.error(`Failed to parse Telegram API response for ${method}: ${responseText.substring(0, 500)}`)
+    logger.error(`Failed to parse Telegram API response for ${method} (status: ${response.status}, length: ${responseText.length})`)
     return { ok: false, description: `Invalid JSON response from Telegram: ${responseText.substring(0, 200)}` }
   }
 }
@@ -143,19 +150,20 @@ export async function uploadStickerFile(botToken: string, userId: string, sticke
         })
 
         res.on('end', () => {
-          logger.info(`Telegram API uploadStickerFile response (status: ${res.statusCode}): ${responseBody.substring(0, 500)}`)
-
           if (!responseBody || responseBody.trim() === '') {
+            logger.warn(`Telegram API uploadStickerFile response (status: ${res.statusCode}): empty`)
             return reject(new Error(`Empty response from Telegram (HTTP ${res.statusCode})`))
           }
 
           try {
             const result = JSON.parse(responseBody)
+            logger.info(`Telegram API uploadStickerFile response (status: ${res.statusCode}): ${summarizeTelegramResult(result)}`)
             if (!result.ok) {
               return reject(new Error(result.description || 'Failed to upload sticker file'))
             }
             resolve(result.result)
           } catch {
+            logger.error(`Failed to parse Telegram API uploadStickerFile response (status: ${res.statusCode}, length: ${responseBody.length})`)
             return reject(new Error(`Invalid JSON response: ${responseBody.substring(0, 200)}`))
           }
         })
@@ -218,17 +226,19 @@ export async function uploadStickerBuffer(
         })
 
         res.on('end', () => {
-          logger.info(`Telegram API uploadStickerFile(buffer) response (status: ${res.statusCode}): ${responseBody.substring(0, 500)}`)
           if (!responseBody || responseBody.trim() === '') {
+            logger.warn(`Telegram API uploadStickerFile(buffer) response (status: ${res.statusCode}): empty`)
             return reject(new Error(`Empty response from Telegram (HTTP ${res.statusCode})`))
           }
           try {
             const result = JSON.parse(responseBody)
+            logger.info(`Telegram API uploadStickerFile(buffer) response (status: ${res.statusCode}): ${summarizeTelegramResult(result)}`)
             if (!result.ok) {
               return reject(new Error(result.description || 'Failed to upload sticker buffer'))
             }
             resolve(result.result)
           } catch {
+            logger.error(`Failed to parse Telegram API uploadStickerFile(buffer) response (status: ${res.statusCode}, length: ${responseBody.length})`)
             return reject(new Error(`Invalid JSON response: ${responseBody.substring(0, 200)}`))
           }
         })

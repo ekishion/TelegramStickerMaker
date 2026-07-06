@@ -4,6 +4,28 @@ import { Buffer } from 'node:buffer'
 import { config } from '../../utils/config'
 import { telegramService } from '../../services/telegramService'
 import { logger } from '../../utils/logger'
+import {
+  assertAllowedUploadPart,
+  assertMaxFileCount,
+  parseBoundedDataUrl,
+  resolveStickerTempFile
+} from '../../utils/fileSecurity'
+
+const STICKER_MIME_TYPES = ['image/webp', 'video/webm']
+
+function stickerFormatFromName(fileName: string, mime?: string): 'static' | 'video' | null {
+  const ext = path.extname(fileName).toLowerCase()
+  if (ext === '.webm' || mime === 'video/webm') return 'video'
+  if (ext === '.webp' || mime === 'image/webp') return 'static'
+  return null
+}
+
+function assertStickerSize(format: 'static' | 'video', size: number) {
+  const maxSize = format === 'video' ? config.sticker.maxVideoFileSize : 512 * 1024
+  if (size > maxSize) {
+    throw createError({ statusCode: 413, message: 'Sticker file is too large' })
+  }
+}
 
 export default defineEventHandler(async (event) => {
   try {
@@ -25,12 +47,18 @@ export default defineEventHandler(async (event) => {
       if (!userId) throw createError({ statusCode: 400, message: 'User ID is required' })
       if (!packName) throw createError({ statusCode: 400, message: 'Pack name is required' })
 
-      const stickers = formData
-        .filter(part => part.name === 'stickers' && part.filename && part.data)
+      const stickerParts = formData.filter(part => part.name === 'stickers' && part.filename && part.data)
+      assertMaxFileCount(stickerParts.length, config.upload.maxImageFiles + config.upload.maxVideoFiles)
+
+      const stickers = stickerParts
         .map(part => {
-          const fileName = part.filename || 'sticker.webp'
-          const ext = path.extname(fileName).toLowerCase()
-          const format: 'static' | 'video' = ext === '.webm' ? 'video' : 'static'
+          assertAllowedUploadPart(part, STICKER_MIME_TYPES)
+          const fileName = path.basename(part.filename || 'sticker.webp')
+          const format = stickerFormatFromName(fileName, part.type)
+          if (!format) {
+            throw createError({ statusCode: 415, message: 'Unsupported sticker file type' })
+          }
+          assertStickerSize(format, part.data.length)
           return { name: fileName, buffer: Buffer.from(part.data), format }
         })
 
@@ -75,25 +103,26 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, message: 'At least one file is required' })
     }
 
+    assertMaxFileCount(files.length, config.upload.maxImageFiles + config.upload.maxVideoFiles)
+
     const dataUrlFiles: { name: string; buffer: Buffer; format: 'static' | 'video' }[] = []
     const isDataUrl = (value: string) => /^data:[^;]+;base64,/.test(value)
-    const parseDataUrl = (dataUrl: string) => {
-      const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/)
-      if (!match) throw createError({ statusCode: 400, message: 'Invalid data URL file payload' })
-      const mime = match[1]
-      const base64 = match[2]
-      if (!mime || !base64) throw createError({ statusCode: 400, message: 'Invalid data URL file payload' })
-      return { mime, buffer: Buffer.from(base64, 'base64') }
-    }
 
     for (const file of files) {
       if (!file || typeof file !== 'object') continue
       if (typeof file.url !== 'string' || typeof file.name !== 'string') continue
       if (!isDataUrl(file.url)) continue
-      const parsed = parseDataUrl(file.url)
-      const ext = path.extname(file.name).toLowerCase()
-      const format: 'static' | 'video' = ext === '.webm' || parsed.mime === 'video/webm' ? 'video' : 'static'
-      dataUrlFiles.push({ name: file.name, buffer: parsed.buffer, format })
+      const parsed = parseBoundedDataUrl(file.url)
+      if (!STICKER_MIME_TYPES.includes(parsed.mime)) {
+        throw createError({ statusCode: 415, message: 'Unsupported sticker file type' })
+      }
+      const fileName = path.basename(file.name)
+      const format = stickerFormatFromName(fileName, parsed.mime)
+      if (!format) {
+        throw createError({ statusCode: 415, message: 'Unsupported sticker file type' })
+      }
+      assertStickerSize(format, parsed.buffer.length)
+      dataUrlFiles.push({ name: fileName, buffer: parsed.buffer, format })
     }
 
     if (dataUrlFiles.length > 0) {
@@ -119,17 +148,16 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    const tempDir = config.paths.temp
     const validFiles: string[] = []
 
     for (const file of files) {
       const fileName = typeof file === 'string' ? file : (typeof file?.name === 'string' ? file.name : '')
-      const filePath = path.join(tempDir, fileName)
-      if (fs.existsSync(filePath)) {
-        const ext = path.extname(fileName).toLowerCase()
-        if (ext === '.webp' || ext === '.webm') {
-          validFiles.push(filePath)
-        }
+      const tempFile = resolveStickerTempFile(fileName)
+      if (tempFile && fs.existsSync(tempFile.filePath)) {
+        const stats = fs.statSync(tempFile.filePath)
+        const format = tempFile.ext === '.webm' ? 'video' : 'static'
+        assertStickerSize(format, stats.size)
+        validFiles.push(tempFile.filePath)
       }
     }
 

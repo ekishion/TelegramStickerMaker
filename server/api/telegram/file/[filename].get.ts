@@ -1,7 +1,6 @@
 import fs from 'fs'
-import path from 'path'
-import { config } from '../../../utils/config'
 import { setNoStoreHeaders } from '../../../utils/httpCache'
+import { resolveTempFile } from '../../../utils/fileSecurity'
 
 export default defineEventHandler(event => {
   setNoStoreHeaders(event)
@@ -16,25 +15,21 @@ export default defineEventHandler(event => {
   } catch {
     filename = rawFilename
   }
-  const filePath = path.join(config.paths.temp, filename)
-  const resolvedPath = path.resolve(filePath)
-  const tempDirResolved = path.resolve(config.paths.temp)
-
-  if (!resolvedPath.startsWith(tempDirResolved)) {
+  const file = resolveTempFile(filename)
+  if (!file) {
     throw createError({ statusCode: 403, statusMessage: 'Access denied' })
   }
 
-  if (!fs.existsSync(filePath)) {
+  if (!fs.existsSync(file.filePath)) {
     throw createError({ statusCode: 404, statusMessage: 'File not found' })
   }
 
-  const ext = path.extname(filename).toLowerCase()
   const mimeTypes: Record<string, string> = {
     '.webp': 'image/webp',
     '.webm': 'video/webm',
     '.png': 'image/png'
   }
 
-  event.node.res.setHeader('Content-Type', mimeTypes[ext] || 'application/octet-stream')
-  return sendStream(event, fs.createReadStream(filePath))
+  event.node.res.setHeader('Content-Type', mimeTypes[file.ext] || 'application/octet-stream')
+  return sendStream(event, fs.createReadStream(file.filePath))
 })

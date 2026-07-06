@@ -5,6 +5,9 @@ import { config } from '../utils/config'
 import { ensureDir } from '../utils/fileCleanup'
 import { imageService } from '../services/imageService'
 import { logger } from '../utils/logger'
+import { assertAllowedUploadPart } from '../utils/fileSecurity'
+
+const IMAGE_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
 
 function fixFilenameEncoding(filename: string): string {
   try {
@@ -30,6 +33,7 @@ export default defineEventHandler(async (event) => {
     if (!imagePart || !imagePart.data) {
       throw createError({ statusCode: 400, message: '请上传图片文件' })
     }
+    assertAllowedUploadPart(imagePart, IMAGE_MIME_TYPES)
 
     const taskIdPart = formData.find(part => part.name === 'taskId')
     const taskId = taskIdPart?.data?.toString() || null

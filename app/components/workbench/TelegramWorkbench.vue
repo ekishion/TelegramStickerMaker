@@ -244,17 +244,16 @@ const loadConfig = () => {
   if (!raw) return
   try {
     const config = JSON.parse(raw)
-    botToken.value = config.botToken || ''
     userId.value = config.userId || ''
     packName.value = config.packName || ''
     packTitle.value = config.packTitle || ''
     emoji.value = config.emoji || '🙂'
+    if (config.botToken) saveConfig()
   } catch {}
 }
 
 const saveConfig = () => {
   localStorage.setItem(CONFIG_KEY, JSON.stringify({
-    botToken: botToken.value,
     userId: userId.value,
     packName: packName.value,
     packTitle: packTitle.value,
