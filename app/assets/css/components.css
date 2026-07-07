@@ -194,17 +194,17 @@
   transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
   white-space: nowrap;
   min-height: 40px;
-  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.25);
+  box-shadow: 0 2px 8px rgba(122, 161, 58, 0.26);
 }
 
 .kv-action:hover {
-  box-shadow: 0 4px 16px rgba(33, 150, 243, 0.35);
+  box-shadow: 0 4px 16px rgba(122, 161, 58, 0.34);
   transform: translateY(-1px);
 }
 
 .kv-action:active {
   transform: scale(0.97);
-  box-shadow: 0 1px 4px rgba(33, 150, 243, 0.2);
+  box-shadow: 0 1px 4px rgba(122, 161, 58, 0.22);
 }
 
 .kv-action.secondary {

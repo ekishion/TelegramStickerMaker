@@ -412,7 +412,7 @@ const openPreview = (task: VideoTask) => {
   backdrop-filter: blur(6px);
 }
 .tg-task-badge.pending { background: rgba(44, 44, 44, 0.68); }
-.tg-task-badge.converting { background: rgba(33, 150, 243, 0.82); }
+.tg-task-badge.converting { background: rgba(122, 161, 58, 0.86); }
 .tg-task-badge.done { background: rgba(41, 177, 93, 0.82); }
 .tg-task-badge.error { background: rgba(232, 78, 60, 0.82); }
 

@@ -684,11 +684,11 @@ const startUpload = async () => {
   cursor: pointer;
   transition: all 0.2s ease;
   min-height: 38px;
-  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.25);
+  box-shadow: 0 2px 8px rgba(122, 161, 58, 0.26);
 }
 
 .tg-btn-primary:hover:not(:disabled) {
-  box-shadow: 0 4px 16px rgba(33, 150, 243, 0.35);
+  box-shadow: 0 4px 16px rgba(122, 161, 58, 0.34);
   transform: translateY(-1px);
 }
 

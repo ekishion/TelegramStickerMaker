@@ -122,13 +122,13 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 5px;
-  padding: 6px 12px;
+  padding: 8px 13px;
   border-radius: var(--radius-full);
-  border: 1px solid var(--color-border);
-  background: transparent;
+  border: 1px solid rgba(24, 62, 55, 0.12);
+  background: rgba(255, 255, 255, 0.38);
   color: var(--color-text-secondary);
   font-size: 0.78rem;
-  font-weight: 500;
+  font-weight: 800;
   font-family: var(--font-sans);
   text-decoration: none;
   transition: all 0.15s ease;
@@ -138,7 +138,7 @@ onMounted(() => {
 .nav-back:hover,
 .nav-enter:hover {
   border-color: var(--color-accent);
-  color: var(--color-accent);
+  color: var(--color-accent-strong);
   background: var(--color-accent-light);
 }
 
@@ -146,12 +146,13 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 14px;
+  padding: 9px 14px;
   border-radius: var(--radius-full);
-  border: none;
-  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.34);
   color: var(--color-text-secondary);
   font-size: 0.8rem;
+  font-weight: 800;
   font-family: var(--font-sans);
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
@@ -159,7 +160,7 @@ onMounted(() => {
 }
 
 .theme-toggle:hover {
-  background: var(--color-surface-hover);
+  background: var(--color-surface);
   color: var(--color-text);
 }
 

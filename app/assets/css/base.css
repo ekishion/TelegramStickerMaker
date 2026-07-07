@@ -18,12 +18,37 @@ html {
 body {
   font-family: var(--font-sans);
   color: var(--color-text);
-  background: var(--color-bg);
+  background:
+    radial-gradient(circle at 12% 8%, rgba(215, 239, 122, 0.2), transparent 28rem),
+    radial-gradient(circle at 88% 18%, rgba(255, 122, 89, 0.17), transparent 24rem),
+    radial-gradient(circle at 45% 110%, rgba(240, 189, 66, 0.16), transparent 28rem),
+    var(--color-bg);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   touch-action: manipulation;
   overscroll-behavior: none;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0.42;
+  background-image:
+    linear-gradient(rgba(62, 68, 36, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(62, 68, 36, 0.05) 1px, transparent 1px);
+  background-size: 36px 36px;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), transparent 78%);
+}
+
+[data-theme="dark"] body::before {
+  opacity: 0.24;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
 }
 
 img,

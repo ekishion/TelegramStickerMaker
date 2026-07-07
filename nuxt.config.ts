@@ -13,7 +13,7 @@ export default defineNuxtConfig({
         { rel: 'icon', type: 'image/png', href: '/icon.png' }
       ],
       meta: [
-        { name: 'theme-color', content: '#2196F3' },
+        { name: 'theme-color', content: '#7aa13a' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover' }
       ]
     }
