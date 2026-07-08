@@ -1,6 +1,5 @@
 <template>
   <div class="tg-workbench">
-    <!-- Connection status bar -->
     <div class="tg-status-bar">
       <div class="tg-status-indicator" :class="connectionState">
         <span class="tg-status-dot"></span>
@@ -9,22 +8,19 @@
       <div class="tg-status-actions">
         <button class="tg-btn-ghost" type="button" @click="saveConfig">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-          保存
+          保存配置
         </button>
       </div>
     </div>
 
-    <!-- Config section -->
-    <div class="tg-section">
-      <div class="tg-section-head">
-        <div class="tg-section-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-        </div>
-        <div>
-          <h3 class="tg-section-title">Bot 连接配置</h3>
-          <p class="tg-section-desc">配置 Telegram Bot Token 和目标贴纸包信息</p>
-        </div>
-      </div>
+    <WorkbenchSection
+      title="Bot 连接配置"
+      description="配置 Telegram Bot Token、用户 ID 和贴纸包信息"
+      class="tg-config-section"
+    >
+      <template #icon>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </template>
 
       <div class="tg-config-grid">
         <div class="tg-field tg-field-full">
@@ -35,7 +31,7 @@
           <div class="tg-input-wrap">
             <input id="telegram-bot-token" v-model="botToken" name="botToken" class="tg-input" type="password" placeholder="123456:ABC-DEF..." autocomplete="off" />
             <button class="tg-btn-sm" type="button" @click="validateToken" :disabled="!botToken || validating">
-              {{ validating ? '验证中...' : '验证' }}
+              {{ validating ? '验证中...' : '验证连接' }}
             </button>
           </div>
         </div>
@@ -45,7 +41,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             用户 ID
           </label>
-          <input id="telegram-user-id" v-model="userId" name="telegramUserId" class="tg-input" placeholder="Your Telegram ID" autocomplete="off" />
+          <input id="telegram-user-id" v-model="userId" name="telegramUserId" class="tg-input" placeholder="请输入 Telegram 用户 ID" autocomplete="off" />
         </div>
 
         <div class="tg-field">
@@ -61,7 +57,7 @@
         <div class="tg-field">
           <label class="tg-label" for="telegram-pack-name">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M4 7V4a2 2 0 0 1 2-2h8.5L20 7.5V20a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3"/><polyline points="14 2 14 8 20 8"/></svg>
-            贴纸包短名
+            贴纸包短名称
           </label>
           <input id="telegram-pack-name" v-model="packName" name="packName" class="tg-input" placeholder="my_sticker_pack" autocomplete="off" />
         </div>
@@ -75,9 +71,8 @@
         </div>
       </div>
 
-      <!-- Pack history -->
       <div v-if="packHistory.length" class="tg-history">
-        <div class="tg-history-label">历史贴纸包</div>
+        <div class="tg-history-label">最近使用的贴纸包</div>
         <div class="tg-history-list">
           <button
             v-for="(pack, i) in packHistory"
@@ -93,7 +88,6 @@
         </div>
       </div>
 
-      <!-- Connection result -->
       <div v-if="botInfo || tokenError" class="tg-result">
         <div v-if="botInfo" class="tg-result-success">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
@@ -104,19 +98,19 @@
           <span>{{ tokenError }}</span>
         </div>
       </div>
-    </div>
+    </WorkbenchSection>
 
-    <!-- Sticker cache section -->
-    <div class="tg-section">
-      <div class="tg-section-head">
-        <div class="tg-section-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
-        </div>
-        <div>
-          <h3 class="tg-section-title">缓存贴纸</h3>
-          <p class="tg-section-desc">选择已转换的贴纸上传到 Telegram</p>
-        </div>
-        <div class="tg-section-right">
+    <WorkbenchSection
+      title="缓存贴纸"
+      description="选择已完成转换的贴纸并上传到 Telegram"
+      class="tg-cache-section"
+    >
+      <template #icon>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+      </template>
+
+      <template #right>
+        <div class="tg-section-actions">
           <span v-if="outputFiles.length" class="tg-count">{{ selectedFiles.length }}/{{ outputFiles.length }}</span>
           <button class="tg-btn-ghost" type="button" @click="loadOutputFiles" :disabled="loadingFiles">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
@@ -125,13 +119,13 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
           </button>
         </div>
-      </div>
+      </template>
 
-      <div v-if="!outputFiles.length" class="tg-empty">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32" height="32"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-        <span>还没有缓存贴纸</span>
-        <span class="tg-empty-hint">在图片或视频页转换后会出现在这里</span>
-      </div>
+      <WorkbenchEmptyState
+        v-if="!outputFiles.length"
+        title="还没有缓存贴纸"
+        hint="在图片或视频页完成转换后，会自动出现在这里"
+      />
 
       <div v-else class="tg-gallery">
         <button
@@ -154,7 +148,6 @@
         </button>
       </div>
 
-      <!-- Upload bar -->
       <div v-if="outputFiles.length" class="tg-upload-bar">
         <button class="tg-btn-outline" type="button" @click="toggleSelectAll" :disabled="!outputFiles.length">
           {{ allSelected ? '取消全选' : '全选' }}
@@ -171,12 +164,15 @@
           {{ uploading ? '上传中...' : '上传到 Telegram' }}
         </button>
       </div>
-    </div>
+    </WorkbenchSection>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import WorkbenchEmptyState from '@/components/workbench/WorkbenchEmptyState.vue'
+import WorkbenchSection from '@/components/workbench/WorkbenchSection.vue'
+import { useObjectUrlRegistry } from '@/composables/useObjectUrlRegistry'
 import { useHistoryStore } from '@/stores/history'
 import {
   clearCachedStickers,
@@ -188,12 +184,24 @@ import {
 interface OutputFile extends CachedStickerFile {
   url: string
 }
-interface BotInfo { id: number; username: string; firstName: string }
-interface PackEntry { packName: string; packTitle: string; emoji: string }
+
+interface BotInfo {
+  id: number
+  username: string
+  firstName: string
+}
+
+interface PackEntry {
+  packName: string
+  packTitle: string
+  emoji: string
+}
 
 const PACK_HISTORY_KEY = 'telegram_pack_history'
 const CONFIG_KEY = 'telegram_config'
+
 const historyStore = useHistoryStore()
+const objectUrls = useObjectUrlRegistry()
 
 const botToken = ref('')
 const userId = ref('')
@@ -223,32 +231,28 @@ const connectionState = computed(() => {
 })
 
 const connectionLabel = computed(() => {
-  if (validating.value) return '验证中...'
+  if (validating.value) return '验证连接中...'
   if (botInfo.value) return `已连接 @${botInfo.value.username}`
   if (tokenError.value) return '连接失败'
-  return '未连接'
+  return '尚未连接'
 })
 
 onMounted(() => {
   loadConfig()
   loadPackHistory()
-  loadOutputFiles()
-})
-
-onBeforeUnmount(() => {
-  outputFiles.value.forEach(file => URL.revokeObjectURL(file.url))
+  void loadOutputFiles()
 })
 
 const loadConfig = () => {
   const raw = localStorage.getItem(CONFIG_KEY)
   if (!raw) return
+
   try {
     const config = JSON.parse(raw)
     userId.value = config.userId || ''
     packName.value = config.packName || ''
     packTitle.value = config.packTitle || ''
     emoji.value = config.emoji || '🙂'
-    if (config.botToken) saveConfig()
   } catch {}
 }
 
@@ -264,6 +268,7 @@ const saveConfig = () => {
 const loadPackHistory = () => {
   const raw = localStorage.getItem(PACK_HISTORY_KEY)
   if (!raw) return
+
   try {
     packHistory.value = JSON.parse(raw)
   } catch {
@@ -277,7 +282,13 @@ const savePackHistory = () => {
 
 const addPackToHistory = () => {
   if (!packName.value) return
-  const entry: PackEntry = { packName: packName.value, packTitle: packTitle.value, emoji: emoji.value }
+
+  const entry: PackEntry = {
+    packName: packName.value,
+    packTitle: packTitle.value,
+    emoji: emoji.value
+  }
+
   packHistory.value = [entry, ...packHistory.value.filter(pack => pack.packName !== entry.packName)].slice(0, 20)
   savePackHistory()
 }
@@ -295,9 +306,11 @@ const removePack = (index: number) => {
 
 const validateToken = async () => {
   if (!botToken.value) return
+
   validating.value = true
   tokenError.value = ''
   botInfo.value = null
+
   try {
     const res = await fetch('/api/telegram/validate', {
       method: 'POST',
@@ -305,6 +318,7 @@ const validateToken = async () => {
       body: JSON.stringify({ botToken: botToken.value })
     })
     const data = await res.json()
+
     if (!res.ok) throw new Error(data.error || data.message || 'Token 验证失败')
     botInfo.value = data.bot
   } catch (error: any) {
@@ -317,12 +331,13 @@ const validateToken = async () => {
 const loadOutputFiles = async () => {
   loadingFiles.value = true
   cacheMessage.value = ''
-  outputFiles.value.forEach(file => URL.revokeObjectURL(file.url))
+  objectUrls.reset()
+
   try {
     const cached = await listCachedStickers()
     outputFiles.value = cached
       .filter(file => file.mime === 'image/webp' || file.mime === 'video/webm')
-      .map(file => ({ ...file, url: createStickerObjectUrl(file) }))
+      .map(file => ({ ...file, url: objectUrls.track(createStickerObjectUrl(file)) }))
     selectedFiles.value = selectedFiles.value.filter(id => outputFiles.value.some(file => file.id === id))
   } catch (error: any) {
     cacheMessage.value = error.message || '读取浏览器缓存失败'
@@ -335,11 +350,12 @@ const loadOutputFiles = async () => {
 const clearAllCache = async () => {
   clearingCache.value = true
   cacheMessage.value = ''
+
   try {
     await clearCachedStickers()
     historyStore.clear()
     selectedFiles.value = []
-    outputFiles.value.forEach(file => URL.revokeObjectURL(file.url))
+    objectUrls.reset()
     outputFiles.value = []
     cacheMessage.value = '缓存和历史已清空'
   } catch (error: any) {
@@ -361,6 +377,7 @@ const toggleSelectAll = () => {
 
 const startUpload = async () => {
   if (!canUpload.value) return
+
   uploading.value = true
   uploadResult.value = null
   tokenError.value = ''
@@ -383,7 +400,9 @@ const startUpload = async () => {
       body: formData
     })
     const data = await res.json()
+
     if (!res.ok) throw new Error(data.error || data.message || '上传失败')
+
     uploadResult.value = data.results || { success: 0, failed: 0 }
     addPackToHistory()
   } catch (error: any) {
@@ -396,20 +415,20 @@ const startUpload = async () => {
 </script>
 
 <style scoped>
-/* ========== Workbench Shell ========== */
 .tg-workbench {
   display: grid;
   gap: var(--gap-lg);
 }
 
-/* ========== Status Bar ========== */
 .tg-status-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 10px 16px;
   border-radius: var(--radius-md);
-  background: var(--color-bg-subtle);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
 }
 
 .tg-status-indicator {
@@ -417,13 +436,13 @@ const startUpload = async () => {
   align-items: center;
   gap: 8px;
   font-size: 0.8rem;
-  font-weight: 500;
+  font-weight: 700;
   color: var(--color-text-secondary);
 }
 
 .tg-status-dot {
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   background: var(--color-text-tertiary);
   transition: background 0.3s ease;
@@ -436,10 +455,12 @@ const startUpload = async () => {
 
 .tg-status-indicator.error .tg-status-dot {
   background: var(--color-error);
+  box-shadow: 0 0 0 4px var(--color-error-light);
 }
 
 .tg-status-indicator.loading .tg-status-dot {
   background: var(--color-accent);
+  box-shadow: 0 0 0 4px var(--color-accent-light);
   animation: pulse 1s ease infinite;
 }
 
@@ -456,56 +477,11 @@ const startUpload = async () => {
   color: var(--color-error);
 }
 
-.tg-status-actions {
+.tg-status-actions,
+.tg-section-actions {
   display: flex;
+  align-items: center;
   gap: 6px;
-}
-
-/* ========== Section ========== */
-.tg-section {
-  display: grid;
-  gap: var(--gap-md);
-  padding: 20px;
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-}
-
-.tg-section-head {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.tg-section-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-sm);
-  background: var(--color-accent-light);
-  color: var(--color-accent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.tg-section-title {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--color-text);
-  line-height: 1.3;
-}
-
-.tg-section-desc {
-  font-size: 0.78rem;
-  color: var(--color-text-tertiary);
-  margin-top: 2px;
-}
-
-.tg-section-right {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 4px;
 }
 
 .tg-count {
@@ -517,7 +493,6 @@ const startUpload = async () => {
   border-radius: var(--radius-full);
 }
 
-/* ========== Config Grid ========== */
 .tg-config-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -556,7 +531,7 @@ const startUpload = async () => {
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-border);
   padding: 9px 12px;
-  background: var(--color-bg-subtle);
+  background: var(--color-surface-solid);
   color: var(--color-text);
   font-size: 0.85rem;
   font-family: var(--font-sans);
@@ -585,7 +560,6 @@ const startUpload = async () => {
   min-width: 0;
 }
 
-/* ========== Buttons ========== */
 .tg-btn-sm {
   padding: 0 14px;
   border-radius: var(--radius-sm);
@@ -593,7 +567,7 @@ const startUpload = async () => {
   background: var(--color-surface-solid);
   color: var(--color-text-secondary);
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: 700;
   font-family: var(--font-sans);
   cursor: pointer;
   transition: all 0.15s ease;
@@ -605,7 +579,10 @@ const startUpload = async () => {
   color: var(--color-accent);
 }
 
-.tg-btn-sm:disabled {
+.tg-btn-sm:disabled,
+.tg-btn-ghost:disabled,
+.tg-btn-outline:disabled,
+.tg-btn-primary:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
@@ -616,7 +593,7 @@ const startUpload = async () => {
   gap: 5px;
   padding: 5px 10px;
   border-radius: var(--radius-sm);
-  border: none;
+  border: 1px solid transparent;
   background: transparent;
   color: var(--color-text-secondary);
   font-size: 0.78rem;
@@ -627,13 +604,9 @@ const startUpload = async () => {
 }
 
 .tg-btn-ghost:hover:not(:disabled) {
-  background: var(--color-bg-subtle);
-  color: var(--color-text);
-}
-
-.tg-btn-ghost:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+  background: var(--color-surface-hover);
+  color: var(--color-accent-strong);
+  border-color: var(--color-border);
 }
 
 .tg-btn-danger:hover:not(:disabled) {
@@ -651,7 +624,7 @@ const startUpload = async () => {
   background: transparent;
   color: var(--color-text-secondary);
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 700;
   font-family: var(--font-sans);
   cursor: pointer;
   transition: all 0.15s ease;
@@ -662,11 +635,6 @@ const startUpload = async () => {
   border-color: var(--color-accent);
   color: var(--color-accent);
   background: var(--color-accent-light);
-}
-
-.tg-btn-outline:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
 }
 
 .tg-btn-primary {
@@ -684,23 +652,16 @@ const startUpload = async () => {
   cursor: pointer;
   transition: all 0.2s ease;
   min-height: 38px;
-  box-shadow: 0 2px 8px rgba(122, 161, 58, 0.26);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.22);
 }
 
 .tg-btn-primary:hover:not(:disabled) {
-  box-shadow: 0 4px 16px rgba(122, 161, 58, 0.34);
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.3);
   transform: translateY(-1px);
 }
 
 .tg-btn-primary:active:not(:disabled) {
   transform: scale(0.97);
-}
-
-.tg-btn-primary:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
 }
 
 .tg-spinner {
@@ -716,7 +677,6 @@ const startUpload = async () => {
   to { transform: rotate(360deg); }
 }
 
-/* ========== Pack History ========== */
 .tg-history {
   display: grid;
   gap: 8px;
@@ -788,7 +748,6 @@ const startUpload = async () => {
   color: #fff;
 }
 
-/* ========== Result Messages ========== */
 .tg-result {
   display: grid;
   gap: 6px;
@@ -814,31 +773,6 @@ const startUpload = async () => {
   background: var(--color-error-light);
 }
 
-/* ========== Empty State ========== */
-.tg-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 32px 16px;
-  color: var(--color-text-tertiary);
-  text-align: center;
-}
-
-.tg-empty svg {
-  opacity: 0.4;
-}
-
-.tg-empty span {
-  font-size: 0.85rem;
-}
-
-.tg-empty-hint {
-  font-size: 0.75rem !important;
-  opacity: 0.7;
-}
-
-/* ========== Gallery Grid ========== */
 .tg-gallery {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
@@ -848,13 +782,12 @@ const startUpload = async () => {
 .tg-gallery-item {
   border: none;
   background: transparent;
-  padding: 0;
+  padding: 6px;
   cursor: pointer;
   text-align: center;
   font-family: var(--font-sans);
   border-radius: var(--radius-md);
   transition: all 0.15s ease;
-  padding: 6px;
 }
 
 .tg-gallery-item:hover {
@@ -917,7 +850,6 @@ const startUpload = async () => {
   text-overflow: ellipsis;
 }
 
-/* ========== Upload Bar ========== */
 .tg-upload-bar {
   display: flex;
   align-items: center;
@@ -950,13 +882,46 @@ const startUpload = async () => {
   color: var(--color-warning);
 }
 
-/* ========== Mobile ========== */
-@media (max-width: 600px) {
-  .tg-section {
-    padding: 14px;
-    border-radius: var(--radius-md);
+@media (min-width: 1280px) {
+  .tg-workbench {
+    grid-template-columns: minmax(0, 0.92fr) minmax(360px, 0.78fr);
+    align-items: start;
   }
 
+  .tg-status-bar {
+    grid-column: 1 / -1;
+    padding: 14px 18px;
+    border-radius: 20px;
+    backdrop-filter: blur(14px);
+  }
+
+  :global([data-theme="dark"] .tg-status-bar) {
+    background:
+      linear-gradient(180deg, rgba(17, 28, 49, 0.94), rgba(11, 20, 36, 0.96)),
+      var(--color-surface);
+  }
+
+  .tg-config-grid {
+    gap: 16px;
+  }
+
+  .tg-history {
+    padding-top: 10px;
+  }
+
+  .tg-gallery {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 10px;
+  }
+
+  .tg-upload-bar {
+    justify-content: space-between;
+    gap: 16px;
+    padding-top: 16px;
+  }
+}
+
+@media (max-width: 600px) {
   .tg-status-bar {
     padding: 8px 12px;
   }
@@ -968,20 +933,6 @@ const startUpload = async () => {
 
   .tg-divider {
     margin: 0;
-  }
-
-  .tg-section-icon {
-    width: 30px;
-    height: 30px;
-  }
-
-  .tg-section-icon svg {
-    width: 15px;
-    height: 15px;
-  }
-
-  .tg-section-title {
-    font-size: 0.88rem;
   }
 
   .tg-gallery {
@@ -999,7 +950,7 @@ const startUpload = async () => {
   }
 
   .tg-input {
-    font-size: 16px; /* prevents iOS zoom */
+    font-size: 16px;
     padding: 10px 12px;
   }
 

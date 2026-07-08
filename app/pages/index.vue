@@ -1,7 +1,13 @@
 <template>
   <main class="home">
     <section class="hero-lab" aria-labelledby="home-title">
-      <div class="hero-grid" aria-hidden="true"></div>
+      <div class="liquid-field" aria-hidden="true">
+        <span class="liquid-ribbon ribbon-main"></span>
+        <span class="liquid-ribbon ribbon-shadow"></span>
+        <span class="liquid-stream stream-one"></span>
+        <span class="liquid-stream stream-two"></span>
+      </div>
+
       <div class="hero-stickers" aria-hidden="true">
         <div class="sticker-sheet sheet-main">
           <img src="/icon.png" alt="" />
@@ -22,20 +28,21 @@
 
       <div class="hero-copy float-in">
         <p class="hero-kicker">Telegram Sticker Maker</p>
-        <h1 id="home-title">把图片和视频整理成一套能直接发布的 Telegram 贴纸</h1>
+        <h1 id="home-title">把图片和视频整理成可以直接发布的 Telegram 贴纸</h1>
         <p class="hero-lead">
-          本地转换、批量缓存、历史归档和 Bot 上传放在同一个工作台里。少一点来回切工具，多一点直接出包。
+          本地转换、批量缓存、历史归档和 Bot 上传都放在同一个工作台里。少一点来回切工具，多一点直接出包。
         </p>
 
         <div class="hero-actions">
-          <NuxtLink to="/dash" class="hero-button primary">
+          <NuxtLink to="/dash?tab=image" class="hero-button primary">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
               <path d="M12 5v14" />
               <path d="m19 12-7 7-7-7" />
             </svg>
             进入工作台
           </NuxtLink>
-          <NuxtLink to="/dash" class="hero-button secondary">
+
+          <NuxtLink to="/dash?tab=history" class="hero-button secondary">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
               <path d="M4 5h16" />
               <path d="M4 12h16" />
@@ -57,7 +64,7 @@
       <NuxtLink
         v-for="item in quickActions"
         :key="item.title"
-        to="/dash"
+        :to="item.to"
         class="quick-card float-in"
         :style="{ animationDelay: item.delay }"
       >
@@ -76,6 +83,7 @@
         <p class="section-kicker">Workflow</p>
         <h2 id="process-title">从素材到贴纸包，只保留必要步骤</h2>
       </div>
+
       <div class="process-steps">
         <div v-for="step in steps" :key="step.name" class="process-step">
           <span>{{ step.index }}</span>
@@ -91,6 +99,7 @@
         <h2>按 Telegram 规则收束输出</h2>
         <p>静态贴纸保持 512px 边界，视频贴纸限制 3 秒和 256KB，转换结果会缓存到浏览器，减少临时文件过期带来的断链。</p>
       </article>
+
       <article class="detail-panel">
         <p class="section-kicker">Publish</p>
         <h2>上传前还能整理贴纸包</h2>
@@ -135,16 +144,16 @@ const UploadIcon = () => h('svg', {
 ])
 
 const quickActions = [
-  { title: '静态贴纸', text: '图片转 PNG / WEBP', tone: 'tone-teal', icon: ImageIcon, delay: '0.06s' },
-  { title: '视频贴纸', text: 'GIF / MP4 转 VP9', tone: 'tone-coral', icon: VideoIcon, delay: '0.12s' },
-  { title: '上传发布', text: '批量发送到 Telegram', tone: 'tone-amber', icon: UploadIcon, delay: '0.18s' }
+  { title: '静态贴纸', text: '图片转 PNG / WEBP', tone: 'tone-teal', icon: ImageIcon, delay: '0.06s', to: '/dash?tab=image' },
+  { title: '视频贴纸', text: 'GIF / MP4 转 VP9', tone: 'tone-coral', icon: VideoIcon, delay: '0.12s', to: '/dash?tab=video' },
+  { title: '上传发布', text: '批量发送到 Telegram', tone: 'tone-amber', icon: UploadIcon, delay: '0.18s', to: '/dash?tab=telegram' }
 ]
 
 const steps = [
-  { index: '01', name: '上传素材', text: '一次拖入图片、动图或视频。' },
+  { index: '01', name: '上传素材', text: '一次拖入图片、动图或者视频。' },
   { index: '02', name: '本地转换', text: '浏览器和服务端按格式分工处理。' },
-  { index: '03', name: '缓存归档', text: '结果进入历史，方便筛选复用。' },
-  { index: '04', name: '打包发布', text: '选择贴纸后直接上传到包。' }
+  { index: '03', name: '缓存归档', text: '结果进入历史，方便筛选和复用。' },
+  { index: '04', name: '打包发布', text: '选择贴纸后直接上传到目标贴纸包。' }
 ]
 
 useHead({
@@ -171,79 +180,135 @@ useHead({
   display: grid;
   align-items: center;
   padding: clamp(32px, 7vw, 86px);
-  background:
-    linear-gradient(120deg, rgba(255, 249, 231, 0.95) 0%, rgba(238, 237, 201, 0.84) 46%, rgba(255, 226, 205, 0.78) 100%),
-    radial-gradient(circle at 82% 14%, rgba(255, 122, 89, 0.3), transparent 30%),
-    radial-gradient(circle at 8% 90%, rgba(215, 239, 122, 0.36), transparent 34%);
-  border: 1px solid rgba(62, 68, 36, 0.1);
-  box-shadow: 0 24px 70px rgba(70, 62, 35, 0.14);
+  background: #ffffff;
+  border: 1px solid rgba(37, 99, 235, 0.16);
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.08);
 }
 
-.hero-lab::after {
+.hero-lab::before {
   content: '';
   position: absolute;
-  inset: 0;
-  z-index: 1;
+  inset: 16px;
+  z-index: 0;
+  border: 1px solid rgba(37, 99, 235, 0.08);
+  border-radius: 26px;
   pointer-events: none;
-  background: linear-gradient(90deg, rgba(255, 250, 237, 0.58) 0%, rgba(255, 250, 237, 0.3) 48%, transparent 76%);
 }
 
 :global([data-theme="dark"] .hero-lab) {
-  background:
-    radial-gradient(circle at 76% 18%, rgba(215, 239, 122, 0.13), transparent 28%),
-    radial-gradient(circle at 88% 82%, rgba(255, 122, 89, 0.13), transparent 24%),
-    linear-gradient(120deg, #11140d 0%, #1a2014 58%, #1d1911 100%);
-  border-color: rgba(215, 239, 122, 0.14);
+  background: #0b1220;
+  border-color: rgba(96, 165, 250, 0.22);
   box-shadow: 0 24px 90px rgba(0, 0, 0, 0.48);
-}
-
-:global([data-theme="dark"] .hero-lab::after) {
-  display: none;
 }
 
 @media (prefers-color-scheme: dark) {
   :global(:root:not([data-theme]) .hero-lab) {
-    background:
-      radial-gradient(circle at 76% 18%, rgba(215, 239, 122, 0.13), transparent 28%),
-      radial-gradient(circle at 88% 82%, rgba(255, 122, 89, 0.13), transparent 24%),
-      linear-gradient(120deg, #11140d 0%, #1a2014 58%, #1d1911 100%);
-    border-color: rgba(215, 239, 122, 0.14);
+    background: #0b1220;
+    border-color: rgba(96, 165, 250, 0.22);
     box-shadow: 0 24px 90px rgba(0, 0, 0, 0.48);
-  }
-
-  :global(:root:not([data-theme]) .hero-lab::after) {
-    display: none;
-  }
-}
-
-.hero-grid {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  opacity: 0.72;
-  background-image:
-    linear-gradient(rgba(83, 93, 45, 0.1) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(83, 93, 45, 0.1) 1px, transparent 1px);
-  background-size: 42px 42px;
-  mask-image: linear-gradient(90deg, rgba(0, 0, 0, 0.72), transparent 80%);
-}
-
-:global([data-theme="dark"] .hero-grid) {
-  display: none;
-}
-
-@media (prefers-color-scheme: dark) {
-  :global(:root:not([data-theme]) .hero-grid) {
-    display: none;
   }
 }
 
 .hero-copy {
   position: relative;
-  z-index: 3;
+  z-index: 4;
   max-width: 640px;
   display: grid;
   gap: 20px;
+}
+
+.liquid-field {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.liquid-ribbon,
+.liquid-stream {
+  position: absolute;
+  display: block;
+  background: rgba(37, 99, 235, 0.08);
+  transform-origin: center;
+  will-change: transform, opacity;
+}
+
+.ribbon-main {
+  right: -14%;
+  top: 13%;
+  width: min(54vw, 620px);
+  height: min(36vw, 390px);
+  border: 1px solid rgba(37, 99, 235, 0.12);
+  border-radius: 42% 58% 48% 52% / 52% 38% 62% 48%;
+  animation: ribbon-float 16s ease-in-out infinite;
+}
+
+.ribbon-shadow {
+  right: 10%;
+  bottom: -22%;
+  width: min(36vw, 430px);
+  height: min(22vw, 260px);
+  background: rgba(37, 99, 235, 0.05);
+  border-radius: 64% 36% 52% 48% / 42% 52% 48% 58%;
+  animation: ribbon-float-alt 18s ease-in-out infinite;
+}
+
+.liquid-stream {
+  height: 18px;
+  border-radius: 999px;
+}
+
+.stream-one {
+  right: 8%;
+  top: 36%;
+  width: min(34vw, 360px);
+  animation: stream-slide 10s ease-in-out infinite;
+}
+
+.stream-two {
+  right: 19%;
+  top: 43%;
+  width: min(24vw, 260px);
+  height: 10px;
+  background: rgba(96, 165, 250, 0.13);
+  animation: stream-slide-soft 12s ease-in-out infinite reverse;
+}
+
+:global([data-theme="dark"] .liquid-ribbon),
+:global([data-theme="dark"] .liquid-stream) {
+  background: rgba(96, 165, 250, 0.16);
+}
+
+:global([data-theme="dark"] .ribbon-main) {
+  border-color: rgba(147, 197, 253, 0.22);
+}
+
+:global([data-theme="dark"] .ribbon-shadow) {
+  background: rgba(96, 165, 250, 0.11);
+}
+
+:global([data-theme="dark"] .stream-two) {
+  background: rgba(147, 197, 253, 0.18);
+}
+
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme]) .liquid-ribbon),
+  :global(:root:not([data-theme]) .liquid-stream) {
+    background: rgba(96, 165, 250, 0.16);
+  }
+
+  :global(:root:not([data-theme]) .ribbon-main) {
+    border-color: rgba(147, 197, 253, 0.22);
+  }
+
+  :global(:root:not([data-theme]) .ribbon-shadow) {
+    background: rgba(96, 165, 250, 0.11);
+  }
+
+  :global(:root:not([data-theme]) .stream-two) {
+    background: rgba(147, 197, 253, 0.18);
+  }
 }
 
 .hero-kicker,
@@ -309,20 +374,20 @@ useHead({
   border-radius: 999px;
   text-decoration: none;
   font-weight: 800;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease;
 }
 
 .hero-button.primary {
-  color: #20230d;
-  background: linear-gradient(135deg, #d7ef7a 0%, #ffb45f 100%);
-  box-shadow: 0 12px 26px rgba(122, 161, 58, 0.3);
+  color: #ffffff;
+  background: #2563eb;
+  box-shadow: 0 12px 26px rgba(37, 99, 235, 0.24);
 }
 
 .hero-button.secondary {
   color: var(--color-text);
-  background: rgba(255, 255, 255, 0.58);
-  border: 1px solid rgba(62, 68, 36, 0.12);
-  backdrop-filter: blur(16px);
+  background: #ffffff;
+  border: 1px solid rgba(37, 99, 235, 0.18);
+  backdrop-filter: blur(12px);
 }
 
 :global([data-theme="dark"] .hero-button.secondary) {
@@ -343,6 +408,16 @@ useHead({
   transform: translateY(-2px);
 }
 
+.hero-button.primary:hover {
+  background: #1d4ed8;
+  box-shadow: 0 16px 32px rgba(37, 99, 235, 0.28);
+}
+
+.hero-button.secondary:hover {
+  border-color: rgba(37, 99, 235, 0.36);
+  color: var(--color-accent-strong);
+}
+
 .hero-specs {
   display: flex;
   flex-wrap: wrap;
@@ -353,11 +428,11 @@ useHead({
 .hero-specs span {
   padding: 7px 11px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.48);
+  background: rgba(37, 99, 235, 0.06);
   color: var(--color-text-secondary);
   font-size: 0.74rem;
   font-weight: 800;
-  border: 1px solid rgba(62, 68, 36, 0.1);
+  border: 1px solid rgba(37, 99, 235, 0.12);
 }
 
 :global([data-theme="dark"] .hero-specs span) {
@@ -389,9 +464,10 @@ useHead({
   aspect-ratio: 1;
   border-radius: 28px;
   background: rgba(255, 255, 255, 0.74);
-  border: 1px solid rgba(62, 68, 36, 0.13);
-  box-shadow: 0 18px 48px rgba(70, 62, 35, 0.18);
-  backdrop-filter: blur(18px);
+  border: 1px solid rgba(37, 99, 235, 0.16);
+  box-shadow: 0 18px 48px rgba(37, 99, 235, 0.14);
+  backdrop-filter: blur(14px);
+  animation: sticker-float 11s ease-in-out infinite;
 }
 
 :global([data-theme="dark"] .sticker-sheet) {
@@ -447,9 +523,10 @@ useHead({
   bottom: 20%;
   width: clamp(88px, 10vw, 132px);
   transform: rotate(-13deg);
-  background: #ff8a5b;
-  color: #35120c;
+  background: #dbeafe;
+  color: #1d4ed8;
   font-weight: 900;
+  animation-delay: -1.6s;
 }
 
 .sheet-amber {
@@ -457,9 +534,10 @@ useHead({
   bottom: 9%;
   width: clamp(78px, 9vw, 118px);
   transform: rotate(7deg);
-  background: #f0bd42;
-  color: #312102;
+  background: #bfdbfe;
+  color: #1e3a8a;
   font-weight: 900;
+  animation-delay: -3s;
 }
 
 .sticker-track {
@@ -473,9 +551,10 @@ useHead({
   gap: 12px;
   align-items: center;
   padding: 0 18px;
-  background: rgba(62, 68, 36, 0.09);
-  border: 1px solid rgba(62, 68, 36, 0.11);
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.14);
   transform: rotate(-4deg);
+  animation: track-breathe 9s ease-in-out infinite;
 }
 
 .sticker-track span {
@@ -486,11 +565,11 @@ useHead({
 }
 
 .sticker-track span:nth-child(2) {
-  background: rgba(215, 239, 122, 0.7);
+  background: rgba(37, 99, 235, 0.34);
 }
 
 .sticker-track span:nth-child(3) {
-  background: rgba(255, 138, 91, 0.62);
+  background: rgba(96, 165, 250, 0.36);
 }
 
 .quick-start {
@@ -500,6 +579,8 @@ useHead({
 }
 
 .quick-card {
+  position: relative;
+  overflow: hidden;
   min-height: 116px;
   display: flex;
   align-items: center;
@@ -515,10 +596,28 @@ useHead({
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
 
+.quick-card::after {
+  content: '';
+  position: absolute;
+  right: -46px;
+  bottom: -62px;
+  width: 118px;
+  height: 118px;
+  border-radius: 54% 46% 42% 58% / 48% 54% 46% 52%;
+  background: rgba(37, 99, 235, 0.07);
+  transform: translate3d(18px, 18px, 0) rotate(8deg);
+  transition: transform 0.22s ease, background 0.22s ease;
+}
+
 .quick-card:hover {
   transform: translateY(-3px);
   box-shadow: var(--shadow-lg);
-  border-color: rgba(122, 161, 58, 0.28);
+  border-color: rgba(37, 99, 235, 0.28);
+}
+
+.quick-card:hover::after {
+  background: rgba(37, 99, 235, 0.1);
+  transform: translate3d(0, 0, 0) rotate(-2deg);
 }
 
 .quick-icon {
@@ -536,18 +635,18 @@ useHead({
 }
 
 .tone-teal {
-  background: rgba(122, 161, 58, 0.16);
-  color: #557420;
+  background: rgba(37, 99, 235, 0.1);
+  color: #1d4ed8;
 }
 
 .tone-coral {
-  background: rgba(255, 122, 89, 0.17);
-  color: #bf4d32;
+  background: rgba(59, 130, 246, 0.12);
+  color: #2563eb;
 }
 
 .tone-amber {
-  background: rgba(240, 189, 66, 0.23);
-  color: #8a5b07;
+  background: rgba(96, 165, 250, 0.14);
+  color: #1e40af;
 }
 
 .quick-body {
@@ -566,6 +665,8 @@ useHead({
 }
 
 .process-band {
+  position: relative;
+  overflow: hidden;
   display: grid;
   grid-template-columns: minmax(220px, 0.65fr) 1.35fr;
   gap: 24px;
@@ -574,6 +675,19 @@ useHead({
   border-radius: 28px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
+}
+
+.process-band::after {
+  content: '';
+  position: absolute;
+  right: 28px;
+  bottom: 22px;
+  width: min(54%, 520px);
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.1);
+  transform-origin: right center;
+  animation: flow-line 7.2s ease-in-out infinite;
 }
 
 .process-head {
@@ -594,6 +708,8 @@ useHead({
 }
 
 .process-step {
+  position: relative;
+  z-index: 1;
   min-height: 150px;
   display: grid;
   align-content: start;
@@ -601,6 +717,12 @@ useHead({
   padding: 16px;
   border-radius: 20px;
   background: var(--color-bg-subtle);
+  transition: transform 0.18s ease, background 0.18s ease;
+}
+
+.process-step:hover {
+  transform: translateY(-2px);
+  background: rgba(37, 99, 235, 0.08);
 }
 
 .process-step span {
@@ -627,6 +749,8 @@ useHead({
 }
 
 .detail-panel {
+  position: relative;
+  overflow: hidden;
   display: grid;
   gap: 12px;
   padding: 28px;
@@ -634,6 +758,111 @@ useHead({
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   box-shadow: var(--shadow-sm);
+}
+
+.detail-panel::before {
+  content: '';
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 46px;
+  height: 46px;
+  border: 1px solid rgba(37, 99, 235, 0.14);
+  border-radius: 42% 58% 55% 45% / 45% 42% 58% 55%;
+}
+
+@keyframes ribbon-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(-7deg) scale(1);
+  }
+  50% {
+    transform: translate3d(-18px, 12px, 0) rotate(-2deg) scale(1.03);
+  }
+}
+
+@keyframes ribbon-float-alt {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(3deg) scale(1);
+  }
+  50% {
+    transform: translate3d(16px, -16px, 0) rotate(-1deg) scale(0.98);
+  }
+}
+
+@keyframes stream-slide {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scaleX(0.82);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translate3d(-26px, 0, 0) scaleX(1);
+    opacity: 1;
+  }
+}
+
+@keyframes stream-slide-soft {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scaleX(0.9);
+    opacity: 0.58;
+  }
+  50% {
+    transform: translate3d(-14px, 0, 0) scaleX(1);
+    opacity: 0.88;
+  }
+}
+
+@keyframes sticker-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -10px, 0);
+  }
+}
+
+@keyframes track-breathe {
+  0%,
+  100% {
+    opacity: 0.84;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes flow-line {
+  0%,
+  100% {
+    transform: scaleX(0.48);
+    opacity: 0.48;
+  }
+  50% {
+    transform: scaleX(1);
+    opacity: 0.9;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .liquid-ribbon,
+  .liquid-stream,
+  .sticker-sheet,
+  .sticker-track,
+  .quick-card::after,
+  .process-band::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .hero-button,
+  .quick-card,
+  .process-step {
+    transition: none !important;
+  }
 }
 
 @media (max-width: 1180px) {
@@ -694,6 +923,23 @@ useHead({
     padding: 42px 26px 220px;
   }
 
+  .liquid-field {
+    opacity: 0.48;
+  }
+
+  .ribbon-main {
+    right: -34%;
+    top: 42%;
+    width: 520px;
+    height: 250px;
+  }
+
+  .ribbon-shadow,
+  .stream-one,
+  .stream-two {
+    display: none;
+  }
+
   .hero-copy {
     max-width: none;
   }
@@ -734,6 +980,11 @@ useHead({
   .hero-lab {
     border-radius: 24px;
     padding: 30px 18px 180px;
+  }
+
+  .hero-lab::before {
+    inset: 10px;
+    border-radius: 18px;
   }
 
   .hero-copy {

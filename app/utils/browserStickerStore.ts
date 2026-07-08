@@ -14,6 +14,8 @@ export interface CachedStickerFile {
 const DB_NAME = 'telegram-sticker-maker'
 const DB_VERSION = 1
 const STORE_NAME = 'stickers'
+const MAX_CACHE_ITEMS = 180
+const MAX_CACHE_BYTES = 180 * 1024 * 1024
 
 let dbPromise: Promise<IDBDatabase> | null = null
 
@@ -62,6 +64,7 @@ export async function saveCachedSticker(input: Omit<CachedStickerFile, 'id' | 'c
     createdAt: Date.now()
   }
   await withStore('readwrite', store => store.put(record))
+  await pruneCachedStickers([record.id])
   return record
 }
 
@@ -84,4 +87,26 @@ export async function clearCachedStickers() {
 
 export function createStickerObjectUrl(sticker: CachedStickerFile) {
   return URL.createObjectURL(sticker.blob)
+}
+
+async function pruneCachedStickers(protectedIds: string[] = []) {
+  const items = await listCachedStickers()
+  let totalSize = items.reduce((sum, item) => sum + item.size, 0)
+  let totalCount = items.length
+  const protectedSet = new Set(protectedIds)
+  const removable = [...items].sort((a, b) => a.createdAt - b.createdAt)
+
+  for (const item of removable) {
+    if (totalCount <= MAX_CACHE_ITEMS && totalSize <= MAX_CACHE_BYTES) {
+      break
+    }
+
+    if (protectedSet.has(item.id)) {
+      continue
+    }
+
+    await removeCachedSticker(item.id)
+    totalCount -= 1
+    totalSize -= item.size
+  }
 }

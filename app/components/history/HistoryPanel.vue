@@ -1,22 +1,20 @@
 <template>
   <div class="tg-workbench">
-    <!-- Filters section -->
-    <div class="tg-section">
-      <div class="tg-section-head">
-        <div class="tg-section-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        </div>
-        <div>
-          <h3 class="tg-section-title">历史档案</h3>
-          <p class="tg-section-desc">{{ filteredItems.length }} 条记录</p>
-        </div>
-        <div class="tg-section-right">
-          <span class="tg-count" v-if="selectedIds.length">{{ selectedIds.length }} 已选</span>
-        </div>
-      </div>
+    <WorkbenchSection
+      title="历史档案"
+      :description="`${filteredItems.length} 条记录`"
+      class="tg-filter-shell"
+    >
+      <template #icon>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </template>
+
+      <template #right>
+        <span v-if="selectedIds.length" class="tg-count">{{ selectedIds.length }} 已选</span>
+      </template>
 
       <div class="tg-filters">
-        <input v-model="searchQuery" class="tg-search" placeholder="搜索文件名 / 标签" />
+        <input v-model="searchQuery" class="tg-search" placeholder="搜索文件名或标签" />
         <CustomSelect v-model="typeFilter" :options="typeOptions" />
         <CustomSelect v-model="formatFilter" :options="formatOptions" />
         <CustomSelect v-model="tagFilter" :options="tagOptions" />
@@ -30,35 +28,33 @@
         <button class="tg-btn-ghost" type="button" @click="downloadSelected" :disabled="selectedIds.length === 0">批量下载</button>
         <button class="tg-btn-ghost tg-btn-danger" type="button" @click="clearHistory">清空历史</button>
       </div>
-    </div>
+    </WorkbenchSection>
 
-    <!-- Empty state -->
-    <div v-if="filteredItems.length === 0" class="tg-section">
-      <div class="tg-empty">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32" height="32"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-        <span>暂无记录</span>
-        <span class="tg-empty-hint">完成一次贴纸输出后会自动归档到这里</span>
-      </div>
-    </div>
+    <WorkbenchSection v-if="filteredItems.length === 0" title="空历史" description="这里会自动保存已完成的贴纸输出">
+      <template #icon>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="18" height="18"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      </template>
 
-    <!-- Grouped items -->
+      <WorkbenchEmptyState title="暂无记录" hint="完成一次贴纸导出后，会自动归档到这里" />
+    </WorkbenchSection>
+
     <template v-else>
-      <div v-for="(group, dateKey) in grouped" :key="dateKey" class="tg-section">
-        <div class="tg-section-head">
-          <div class="tg-section-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-          </div>
-          <div>
-            <h3 class="tg-section-title">{{ dateKey }}</h3>
-            <p class="tg-section-desc">{{ group.length }} 条记录</p>
-          </div>
-          <div class="tg-section-right">
-            <label class="tg-group-check">
-              <input type="checkbox" :checked="isGroupSelected(group)" @change="toggleGroup(group)" />
-              <span>全选</span>
-            </label>
-          </div>
-        </div>
+      <WorkbenchSection
+        v-for="(group, dateKey) in grouped"
+        :key="dateKey"
+        :title="String(dateKey)"
+        :description="`${group.length} 条记录`"
+      >
+        <template #icon>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </template>
+
+        <template #right>
+          <label class="tg-group-check">
+            <input type="checkbox" :checked="isGroupSelected(group)" @change="toggleGroup(group)" />
+            <span>全选</span>
+          </label>
+        </template>
 
         <div class="tg-gallery">
           <div v-for="item in group" :key="item.id" class="tg-history-item" :class="{ selected: selectedIds.includes(item.id) }">
@@ -70,6 +66,7 @@
               </label>
               <span class="tg-history-type">{{ item.type === 'image' ? '静态' : '视频' }}</span>
             </div>
+
             <div class="tg-history-info">
               <div class="tg-history-name" :title="item.fileName">{{ item.fileName }}</div>
               <div class="tg-history-meta">
@@ -88,6 +85,7 @@
                 @change="(e: Event) => updateTag(item.id, (e.target as HTMLInputElement).value)"
               />
             </div>
+
             <div class="tg-history-actions">
               <button class="tg-btn-ghost" type="button" @click="downloadOne(item, 'png')" :disabled="!item.result?.png">PNG</button>
               <button class="tg-btn-ghost" type="button" @click="downloadOne(item, 'webp')" :disabled="!item.result?.webp">WEBP</button>
@@ -95,21 +93,26 @@
             </div>
           </div>
         </div>
-      </div>
+      </WorkbenchSection>
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useHistoryStore } from '@/stores/history'
-import { formatFileSize, groupByDay } from '@/utils/format'
-import { useLightbox } from '@/composables/useLightbox'
-import { getCachedSticker, clearCachedStickers } from '@/utils/browserStickerStore'
+import { computed, onMounted, ref, watch } from 'vue'
+import WorkbenchEmptyState from '@/components/workbench/WorkbenchEmptyState.vue'
+import WorkbenchSection from '@/components/workbench/WorkbenchSection.vue'
 import CustomSelect from '@/components/ui/CustomSelect.vue'
+import { useLightbox } from '@/composables/useLightbox'
+import { useObjectUrlRegistry } from '@/composables/useObjectUrlRegistry'
+import { useHistoryStore } from '@/stores/history'
+import { clearCachedStickers, getCachedSticker } from '@/utils/browserStickerStore'
+import { formatFileSize, groupByDay } from '@/utils/format'
 
 const historyStore = useHistoryStore()
 const lightbox = useLightbox()
+const objectUrls = useObjectUrlRegistry()
+
 const searchQuery = ref('')
 const typeFilter = ref('all')
 const formatFilter = ref('all')
@@ -122,6 +125,7 @@ const typeOptions = [
   { value: 'image', label: '静态贴纸' },
   { value: 'video', label: '视频贴纸' }
 ]
+
 const formatOptions = [
   { value: 'all', label: '全部格式' },
   { value: 'png', label: 'PNG' },
@@ -134,17 +138,23 @@ onMounted(async () => {
   await resolveCachedUrls()
 })
 
-onBeforeUnmount(() => {
-  Object.values(cachedUrls.value).forEach(url => URL.revokeObjectURL(url))
-})
+watch(
+  () => historyStore.items,
+  () => {
+    void resolveCachedUrls()
+  },
+  { deep: true }
+)
 
 const resolveUrl = (url: string) => {
   if (!url?.startsWith('cache:')) return url
-  const id = url.slice(6)
-  return cachedUrls.value[id] || ''
+  return cachedUrls.value[url.slice(6)] || ''
 }
 
 const resolveCachedUrls = async () => {
+  objectUrls.reset()
+  cachedUrls.value = {}
+
   const ids = new Set<string>()
   historyStore.items.forEach((item: any) => {
     const values = [item.preview, item.result?.png, item.result?.webp, item.result?.webm]
@@ -154,15 +164,16 @@ const resolveCachedUrls = async () => {
   })
 
   for (const id of ids) {
-    if (cachedUrls.value[id]) continue
     const cached = await getCachedSticker(id)
-    if (cached) cachedUrls.value[id] = URL.createObjectURL(cached.blob)
+    if (cached) cachedUrls.value[id] = objectUrls.create(cached.blob)
   }
 }
 
 const availableTags = computed(() => {
   const tags = new Set<string>()
-  historyStore.items.forEach((item: any) => { if (item.inputTag) tags.add(item.inputTag) })
+  historyStore.items.forEach((item: any) => {
+    if (item.inputTag) tags.add(item.inputTag)
+  })
   return Array.from(tags)
 })
 
@@ -173,8 +184,9 @@ const tagOptions = computed(() => [
 
 const filteredItems = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
+
   return historyStore.items.filter((item: any) => {
-    const matchQuery = !query || item.fileName.toLowerCase().includes(query) || (item.inputTag || '').includes(query)
+    const matchQuery = !query || item.fileName.toLowerCase().includes(query) || (item.inputTag || '').toLowerCase().includes(query)
     const matchType = typeFilter.value === 'all' || item.type === typeFilter.value
     const matchFormat =
       formatFilter.value === 'all' ||
@@ -193,30 +205,40 @@ const toggleSelect = (id: string) => {
     ? selectedIds.value.filter(item => item !== id)
     : [...selectedIds.value, id]
 }
-const selectAll = () => { selectedIds.value = filteredItems.value.map((item: any) => item.id) }
-const clearSelection = () => { selectedIds.value = [] }
+
+const selectAll = () => {
+  selectedIds.value = filteredItems.value.map((item: any) => item.id)
+}
+
+const clearSelection = () => {
+  selectedIds.value = []
+}
 
 const toggleGroup = (group: any[]) => {
-  const allSelected = group.every((item: any) => selectedIds.value.includes(item.id))
-  selectedIds.value = allSelected
-    ? selectedIds.value.filter(id => !group.find((item: any) => item.id === id))
+  const everySelected = group.every((item: any) => selectedIds.value.includes(item.id))
+  selectedIds.value = everySelected
+    ? selectedIds.value.filter(id => !group.some((item: any) => item.id === id))
     : [...selectedIds.value, ...group.filter((item: any) => !selectedIds.value.includes(item.id)).map((item: any) => item.id)]
 }
 
 const isGroupSelected = (group: any[]) => group.every((item: any) => selectedIds.value.includes(item.id))
-const updateTag = (id: string, tag: string) => { historyStore.updateTag(id, tag.trim()) }
 
-const downloadName = (fileName: string, format: string) => {
-  return fileName.toLowerCase().endsWith(`.${format}`) ? fileName : `${fileName}.${format}`
+const updateTag = (id: string, tag: string) => {
+  historyStore.updateTag(id, tag.trim())
 }
+
+const downloadName = (fileName: string, format: string) => (
+  fileName.toLowerCase().endsWith(`.${format}`) ? fileName : `${fileName}.${format}`
+)
 
 const downloadOne = (item: any, format: string) => {
   const url = item.result?.[format]
   if (!url) return
-  const a = document.createElement('a')
-  a.href = resolveUrl(url)
-  a.download = downloadName(item.fileName, format)
-  a.click()
+
+  const link = document.createElement('a')
+  link.href = resolveUrl(url)
+  link.download = downloadName(item.fileName, format)
+  link.click()
 }
 
 const toBatchFiles = (items: any[]) => items.flatMap(item => {
@@ -230,202 +252,361 @@ const toBatchFiles = (items: any[]) => items.flatMap(item => {
 const downloadSelected = async () => {
   const targets = historyStore.items.filter((item: any) => selectedIds.value.includes(item.id))
   if (!targets.length) return
+
   const files = toBatchFiles(targets)
   if (files.some(file => String(file.url).startsWith('data:') || String(file.url).startsWith('cache:'))) {
     files.forEach(file => {
-      const a = document.createElement('a')
-      a.href = resolveUrl(file.url)
-      a.download = file.name
-      a.click()
+      const link = document.createElement('a')
+      link.href = resolveUrl(file.url)
+      link.download = file.name
+      link.click()
     })
     return
   }
+
   const response = await fetch('/api/download-batch', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ files })
   })
   if (!response.ok) return
+
   const blob = await response.blob()
   const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `history-${Date.now()}.zip`
-  a.click()
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `history-${Date.now()}.zip`
+  link.click()
   URL.revokeObjectURL(url)
 }
 
-const removeSelected = () => { historyStore.removeMany(selectedIds.value); selectedIds.value = [] }
+const removeSelected = () => {
+  historyStore.removeMany(selectedIds.value)
+  selectedIds.value = []
+}
+
 const clearHistory = async () => {
   historyStore.clear()
   selectedIds.value = []
+  cachedUrls.value = {}
+  objectUrls.reset()
   await clearCachedStickers()
 }
 
 const openPreview = (item: any) => {
-  const meta = item.width ? `${item.width}x${item.height} / ${formatFileSize(item.size || 0)}` : formatFileSize(item.size || 0)
+  const meta = item.width
+    ? `${item.width}x${item.height} / ${formatFileSize(item.size || 0)}`
+    : formatFileSize(item.size || 0)
+
   if (item.type === 'image') {
     lightbox.openImage(resolveUrl(item.preview), item.fileName, meta)
-  } else {
-    lightbox.openVideo(resolveUrl(item.preview), item.fileName, meta)
+    return
   }
+
+  lightbox.openVideo(resolveUrl(item.preview), item.fileName, meta)
 }
 </script>
 
 <style scoped>
-.tg-workbench { display: grid; gap: var(--gap-lg); }
-
-.tg-section {
+.tg-workbench {
   display: grid;
-  gap: var(--gap-md);
-  padding: 20px;
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
+  gap: var(--gap-lg);
 }
 
-.tg-section-head { display: flex; align-items: flex-start; gap: 12px; }
-.tg-section-icon {
-  width: 36px; height: 36px; border-radius: var(--radius-sm);
-  background: var(--color-accent-light); color: var(--color-accent);
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-}
-.tg-section-title { font-size: 0.95rem; font-weight: 600; color: var(--color-text); line-height: 1.3; }
-.tg-section-desc { font-size: 0.78rem; color: var(--color-text-tertiary); margin-top: 2px; }
-.tg-section-right { margin-left: auto; display: flex; align-items: center; gap: 4px; }
 .tg-count {
-  font-size: 0.75rem; font-weight: 600; color: var(--color-accent);
-  padding: 2px 8px; background: var(--color-accent-light); border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-accent);
+  padding: 2px 8px;
+  background: var(--color-accent-light);
+  border-radius: var(--radius-full);
 }
 
-/* Filters */
 .tg-filters {
-  display: flex; gap: 8px; flex-wrap: wrap;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
+
 .tg-search {
-  flex: 1; min-width: 160px; padding: 8px 12px;
-  border-radius: var(--radius-sm); border: 1px solid var(--color-border);
-  background: var(--color-bg-subtle); color: var(--color-text);
-  font-size: 0.8rem; font-family: var(--font-sans);
-  outline: none; transition: border-color 0.15s ease;
+  flex: 1;
+  min-width: 160px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-solid);
+  color: var(--color-text);
+  font-size: 0.8rem;
+  font-family: var(--font-sans);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.tg-search:focus { border-color: var(--color-accent); }
-.tg-search::placeholder { color: var(--color-text-tertiary); }
+
+.tg-search:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-light);
+}
+
+.tg-search::placeholder {
+  color: var(--color-text-tertiary);
+}
 
 .tg-filter-actions {
-  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
-  padding-top: 8px; border-top: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border);
 }
-.tg-spacer { flex: 1; }
 
-/* Group header */
+.tg-spacer {
+  flex: 1;
+}
+
 .tg-group-check {
-  display: flex; align-items: center; gap: 5px;
-  font-size: 0.72rem; color: var(--color-text-tertiary); cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
   white-space: nowrap;
 }
-.tg-group-check input { accent-color: var(--color-accent); }
 
-/* Empty state */
-.tg-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 32px 16px;
-  color: var(--color-text-tertiary);
-  text-align: center;
+.tg-group-check input {
+  accent-color: var(--color-accent);
 }
 
-.tg-empty svg { opacity: 0.4; }
-
-.tg-empty span { font-size: 0.85rem; }
-
-.tg-empty-hint {
-  font-size: 0.75rem !important;
-  opacity: 0.7;
-}
-
-/* Gallery */
 .tg-gallery {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
 }
 
 .tg-history-item {
-  padding: 10px; border-radius: var(--radius-md); background: var(--color-bg-subtle);
-  display: grid; gap: 6px; transition: background 0.15s ease;
+  padding: 10px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-solid);
+  border: 1px solid var(--color-border);
+  display: grid;
+  gap: 6px;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
 }
-.tg-history-item.selected { background: var(--color-accent-light); }
+
+.tg-history-item:hover {
+  border-color: var(--color-border-strong);
+  transform: translateY(-1px);
+}
+
+.tg-history-item.selected {
+  background: var(--color-accent-light);
+  border-color: var(--color-accent);
+}
 
 .tg-history-preview {
-  position: relative; width: 100%; aspect-ratio: 16/10;
-  border-radius: var(--radius-sm); overflow: hidden; background: var(--color-surface);
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border);
   cursor: pointer;
 }
+
 .tg-history-preview img,
-.tg-history-preview video { width: 100%; height: 100%; object-fit: cover; }
+.tg-history-preview video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 
 .tg-history-check {
-  position: absolute; top: 6px; left: 6px;
-  width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
-  background: rgba(0,0,0,0.4); border-radius: 4px; cursor: pointer;
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 4px;
+  cursor: pointer;
 }
-.tg-history-check input { accent-color: #fff; width: 14px; height: 14px; }
+
+.tg-history-check input {
+  accent-color: #fff;
+  width: 14px;
+  height: 14px;
+}
 
 .tg-history-type {
-  position: absolute; bottom: 6px; right: 6px;
-  font-size: 0.6rem; font-weight: 700; padding: 2px 6px;
-  border-radius: 4px; color: #fff; background: rgba(0,0,0,0.5);
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.5);
 }
 
-.tg-history-info { padding: 0 2px; display: grid; gap: 4px; }
+.tg-history-info {
+  padding: 0 2px;
+  display: grid;
+  gap: 4px;
+}
+
 .tg-history-name {
-  font-size: 0.72rem; font-weight: 600; color: var(--color-text);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+
 .tg-history-meta {
-  display: flex; gap: 6px; font-size: 0.65rem; color: var(--color-text-tertiary);
+  display: flex;
+  gap: 6px;
+  font-size: 0.65rem;
+  color: var(--color-text-tertiary);
 }
-.tg-history-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+
+.tg-history-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
 .tg-tag {
-  font-size: 0.6rem; font-weight: 600; padding: 1px 5px;
-  border-radius: 3px; background: var(--color-accent-light); color: var(--color-accent);
+  font-size: 0.6rem;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--color-accent-light);
+  color: var(--color-accent);
 }
+
 .tg-tag-input {
-  width: 100%; padding: 4px 8px;
-  border-radius: var(--radius-sm); border: 1px solid var(--color-border);
-  background: var(--color-surface); color: var(--color-text);
-  font-size: 0.68rem; font-family: var(--font-sans);
-  outline: none; transition: border-color 0.15s ease;
+  width: 100%;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-solid);
+  color: var(--color-text);
+  font-size: 0.68rem;
+  font-family: var(--font-sans);
+  outline: none;
+  transition: border-color 0.15s ease;
 }
-.tg-tag-input:focus { border-color: var(--color-accent); }
-.tg-tag-input::placeholder { color: var(--color-text-tertiary); }
+
+.tg-tag-input:focus {
+  border-color: var(--color-accent);
+}
+
+.tg-tag-input::placeholder {
+  color: var(--color-text-tertiary);
+}
 
 .tg-history-actions {
-  display: flex; gap: 4px; flex-wrap: wrap;
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
 }
 
-/* Buttons */
 .tg-btn-ghost {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 4px 8px; border-radius: var(--radius-sm); border: none;
-  background: transparent; color: var(--color-text-secondary);
-  font-size: 0.7rem; font-weight: 500; font-family: var(--font-sans);
-  cursor: pointer; transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 0.7rem;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
-.tg-btn-ghost:hover:not(:disabled) { background: var(--color-surface); color: var(--color-text); }
-.tg-btn-ghost:disabled { opacity: 0.4; cursor: not-allowed; }
-.tg-btn-danger:hover:not(:disabled) { color: var(--color-error); background: var(--color-error-light); }
+
+.tg-btn-ghost:hover:not(:disabled) {
+  background: var(--color-surface-hover);
+  color: var(--color-accent-strong);
+  border-color: var(--color-border);
+}
+
+.tg-btn-ghost:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.tg-btn-danger:hover:not(:disabled) {
+  color: var(--color-error);
+  background: var(--color-error-light);
+}
+
+@media (min-width: 1280px) {
+  .tg-workbench {
+    gap: 20px;
+  }
+
+  .tg-filter-shell {
+    position: sticky;
+    top: 108px;
+    z-index: 5;
+  }
+
+  .tg-filters {
+    display: grid;
+    grid-template-columns: minmax(260px, 1.2fr) repeat(3, minmax(150px, 0.55fr));
+    gap: 10px;
+  }
+
+  .tg-gallery {
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 14px;
+  }
+
+  .tg-history-item {
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .tg-history-preview {
+    aspect-ratio: 16 / 11;
+  }
+}
 
 @media (max-width: 600px) {
-  .tg-section { padding: 14px; border-radius: var(--radius-md); }
-  .tg-section-icon { width: 30px; height: 30px; }
-  .tg-section-icon svg { width: 15px; height: 15px; }
-  .tg-section-title { font-size: 0.88rem; }
-  .tg-filters { gap: 6px; }
-  .tg-search { min-width: 100%; }
-  .tg-gallery { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
-  .tg-history-actions { gap: 3px; }
-  .tg-btn-ghost { padding: 3px 6px; font-size: 0.65rem; }
-  .tg-filter-actions { gap: 4px; }
+  .tg-filters {
+    gap: 6px;
+  }
+
+  .tg-search {
+    min-width: 100%;
+  }
+
+  .tg-gallery {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 8px;
+  }
+
+  .tg-history-actions {
+    gap: 3px;
+  }
+
+  .tg-btn-ghost {
+    padding: 3px 6px;
+    font-size: 0.65rem;
+  }
+
+  .tg-filter-actions {
+    gap: 4px;
+  }
 }
 </style>

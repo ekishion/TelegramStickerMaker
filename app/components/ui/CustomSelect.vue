@@ -93,12 +93,13 @@ onBeforeUnmount(() => { document.removeEventListener('mousedown', onClickOutside
   cursor: pointer;
   transition: all 0.2s ease;
   min-height: 40px;
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
   text-align: left;
 }
 
 .custom-select-trigger:hover {
   border-color: var(--color-border-strong);
+  background: var(--color-surface-hover);
 }
 
 .custom-select-trigger.open {
@@ -134,7 +135,7 @@ onBeforeUnmount(() => { document.removeEventListener('mousedown', onClickOutside
   z-index: 50;
   border-radius: var(--radius-md);
   background: var(--color-surface-solid);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-strong);
   box-shadow: var(--shadow-lg);
   padding: 4px;
   max-height: 220px;
@@ -163,10 +164,12 @@ onBeforeUnmount(() => { document.removeEventListener('mousedown', onClickOutside
 
 .custom-select-option:hover {
   background: var(--color-accent-light);
+  color: var(--color-accent-strong);
 }
 
 .custom-select-option.selected {
-  color: var(--color-accent);
+  background: var(--color-accent-light);
+  color: var(--color-accent-strong);
   font-weight: 600;
 }
 

@@ -28,9 +28,8 @@
 }
 
 .shimmer {
-  background: linear-gradient(90deg, transparent 0%, var(--color-accent-light) 50%, transparent 100%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
+  background: var(--color-accent-light);
+  animation: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
