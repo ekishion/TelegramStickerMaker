@@ -5,16 +5,15 @@
         <SegmentedTabs v-model="activeTab" :items="tabs" />
       </template>
 
-      <ImageWorkbench v-if="activeTab === 'image'" />
-      <VideoWorkbench v-else-if="activeTab === 'video'" />
-      <TelegramWorkbench v-else-if="activeTab === 'telegram'" />
-      <HistoryPanel v-else />
+      <KeepAlive>
+        <component :is="activePanel" />
+      </KeepAlive>
     </WorkbenchShell>
   </main>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, markRaw, ref, watch } from 'vue'
 import HistoryPanel from '@/components/history/HistoryPanel.vue'
 import SegmentedTabs from '@/components/ui/SegmentedTabs.vue'
 import ImageWorkbench from '@/components/workbench/ImageWorkbench.vue'
@@ -32,6 +31,13 @@ const tabs = computed(() => [
   { key: 'history', label: '历史记录' }
 ])
 
+const panels = {
+  image: markRaw(ImageWorkbench),
+  video: markRaw(VideoWorkbench),
+  telegram: markRaw(TelegramWorkbench),
+  history: markRaw(HistoryPanel)
+} as const
+
 const tabKeys = new Set(['image', 'video', 'telegram', 'history'])
 
 const resolveTab = (value: unknown) => {
@@ -40,6 +46,8 @@ const resolveTab = (value: unknown) => {
 }
 
 const activeTab = ref(resolveTab(route.query.tab))
+
+const activePanel = computed(() => panels[activeTab.value as keyof typeof panels] || panels.image)
 
 watch(
   () => route.query.tab,
