@@ -16,6 +16,12 @@ export interface BrowserStickerResult {
   size: number
 }
 
+export interface DirectStickerCheckResult {
+  reusable: boolean
+  reason?: string
+  result?: BrowserStickerResult
+}
+
 type FfmpegModule = typeof import('@ffmpeg/ffmpeg')
 type FfmpegInstance = InstanceType<FfmpegModule['FFmpeg']>
 
@@ -300,6 +306,85 @@ async function readVideoSize(file: File) {
   const { video, url } = await loadVideo(file)
   try {
     return { width: video.videoWidth || 512, height: video.videoHeight || 512 }
+  } finally {
+    URL.revokeObjectURL(url)
+    video.removeAttribute('src')
+    video.load()
+  }
+}
+
+export async function resolveReusableWebpSticker(file: File): Promise<DirectStickerCheckResult> {
+  if (file.type !== 'image/webp') {
+    return { reusable: false }
+  }
+
+  const source = await createImageBitmap(file)
+
+  try {
+    const errors = validateTelegramStickerOutput({
+      type: 'static',
+      size: file.size,
+      width: source.width,
+      height: source.height
+    })
+
+    if (errors.length) {
+      return { reusable: false, reason: errors.join('，') }
+    }
+
+    const blob = file.slice(0, file.size, 'image/webp')
+    return {
+      reusable: true,
+      result: {
+        fileName: objectUrlToFileName(file.name, 'webp'),
+        blob,
+        url: URL.createObjectURL(blob),
+        width: source.width,
+        height: source.height,
+        size: blob.size
+      }
+    }
+  } finally {
+    source.close()
+  }
+}
+
+export async function resolveReusableWebmSticker(file: File): Promise<DirectStickerCheckResult> {
+  if (file.type !== 'video/webm') {
+    return { reusable: false }
+  }
+
+  const { video, url, duration } = await loadVideo(file)
+
+  try {
+    const width = video.videoWidth || 512
+    const height = video.videoHeight || 512
+    const safeDuration = Number.isFinite(duration) ? duration : TELEGRAM_STICKER_LIMITS.maxVideoDuration
+    const errors = validateTelegramStickerOutput({
+      type: 'video',
+      size: file.size,
+      width,
+      height,
+      duration: safeDuration
+    })
+
+    if (errors.length) {
+      return { reusable: false, reason: errors.join('，') }
+    }
+
+    const blob = file.slice(0, file.size, 'video/webm')
+    return {
+      reusable: true,
+      result: {
+        fileName: objectUrlToFileName(file.name, 'webm'),
+        blob,
+        url: URL.createObjectURL(blob),
+        width,
+        height,
+        duration: Math.min(safeDuration, TELEGRAM_STICKER_LIMITS.maxVideoDuration),
+        size: blob.size
+      }
+    }
   } finally {
     URL.revokeObjectURL(url)
     video.removeAttribute('src')

@@ -105,7 +105,7 @@ import { useObjectUrlRegistry } from '@/composables/useObjectUrlRegistry'
 import { useHistoryStore } from '@/stores/history'
 import { formatFileSize } from '@/utils/format'
 import { saveCachedSticker } from '@/utils/browserStickerStore'
-import { convertVideoToTelegramSticker } from '@/utils/browserStickerConverter'
+import { convertVideoToTelegramSticker, resolveReusableWebmSticker } from '@/utils/browserStickerConverter'
 import { TELEGRAM_STICKER_LIMITS } from '@/utils/telegramStickerRules'
 
 interface VideoTaskResult {
@@ -197,6 +197,44 @@ const convertSingle = async (task: VideoTask) => {
   task.error = ''
 
   try {
+    const reusableWebm = await resolveReusableWebmSticker(task.file)
+
+    if (reusableWebm.reusable && reusableWebm.result) {
+      const cache = await saveCachedSticker({
+        name: reusableWebm.result.fileName,
+        type: 'video',
+        mime: 'video/webm',
+        blob: reusableWebm.result.blob,
+        size: reusableWebm.result.size,
+        width: reusableWebm.result.width,
+        height: reusableWebm.result.height,
+        duration: reusableWebm.result.duration
+      })
+
+      task.status = 'done'
+      task.progress = 100
+      task.message = '已识别为合规 WEBM，直接收录'
+      task.result = {
+        filename: reusableWebm.result.fileName,
+        url: objectUrls.track(reusableWebm.result.url),
+        cacheId: cache.id,
+        width: reusableWebm.result.width,
+        height: reusableWebm.result.height,
+        duration: reusableWebm.result.duration || TELEGRAM_STICKER_LIMITS.maxVideoDuration,
+        size: reusableWebm.result.size
+      }
+
+      historyStore.add({
+        type: 'video',
+        fileName: reusableWebm.result.fileName,
+        preview: `cache:${cache.id}`,
+        duration: task.result.duration,
+        size: reusableWebm.result.size,
+        result: { webm: `cache:${cache.id}` }
+      })
+      return
+    }
+
     const converted = await convertVideoToTelegramSticker(task.file, (progress, message) => {
       task.progress = progress
       task.message = message

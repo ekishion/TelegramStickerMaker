@@ -101,7 +101,7 @@ import { useObjectUrlRegistry } from '@/composables/useObjectUrlRegistry'
 import { useHistoryStore } from '@/stores/history'
 import { formatFileSize } from '@/utils/format'
 import { saveCachedSticker } from '@/utils/browserStickerStore'
-import { convertImageToTelegramSticker } from '@/utils/browserStickerConverter'
+import { convertImageToTelegramSticker, resolveReusableWebpSticker } from '@/utils/browserStickerConverter'
 
 interface ImageTask {
   id: string
@@ -190,6 +190,42 @@ const convertSingle = async (task: ImageTask) => {
   task.error = ''
 
   try {
+    const reusableWebp = await resolveReusableWebpSticker(task.file)
+
+    if (reusableWebp.reusable && reusableWebp.result) {
+      const webpCache = await saveCachedSticker({
+        name: reusableWebp.result.fileName,
+        type: 'static',
+        mime: 'image/webp',
+        blob: reusableWebp.result.blob,
+        size: reusableWebp.result.size,
+        width: reusableWebp.result.width,
+        height: reusableWebp.result.height
+      })
+
+      task.status = 'done'
+      task.progress = 100
+      task.result = {
+        webp: {
+          filename: reusableWebp.result.fileName,
+          size: reusableWebp.result.size,
+          url: objectUrls.track(reusableWebp.result.url),
+          cacheId: webpCache.id
+        }
+      }
+
+      historyStore.add({
+        type: 'image',
+        fileName: reusableWebp.result.fileName,
+        preview: `cache:${webpCache.id}`,
+        width: reusableWebp.result.width,
+        height: reusableWebp.result.height,
+        size: reusableWebp.result.size,
+        result: { webp: `cache:${webpCache.id}` }
+      })
+      return
+    }
+
     const converted = await convertImageToTelegramSticker(task.file)
     task.progress = 80
 
