@@ -12,7 +12,7 @@
     "copy:ffmpeg": "node scripts/copy-ffmpeg-assets.mjs"
   },
   "dependencies": {
-    "@emnapi/core": "^1.10.0",
+    "@emnapi/core": "^1.11.2",
     "@emnapi/runtime": "^1.10.0",
     "@ffmpeg/core": "^0.12.10",
     "@ffmpeg/ffmpeg": "^0.12.15",
