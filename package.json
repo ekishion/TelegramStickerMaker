@@ -12,25 +12,25 @@
     "copy:ffmpeg": "node scripts/copy-ffmpeg-assets.mjs"
   },
   "dependencies": {
-    "@emnapi/core": "^1.10.0",
-    "@emnapi/runtime": "^1.10.0",
+    "@emnapi/core": "^1.11.2",
+    "@emnapi/runtime": "^1.11.2",
     "@ffmpeg/core": "^0.12.10",
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
-    "@pinia/nuxt": "^0.11.3",
-    "archiver": "^7.0.1",
+    "@pinia/nuxt": "^1.0.1",
+    "archiver": "^8.0.0",
     "form-data": "^4.0.6",
     "nuxt": "^4.4.8",
-    "pinia": "^3.0.4",
-    "sharp": "^0.34.5",
-    "vue": "^3.5.33",
+    "pinia": "^4.0.2",
+    "sharp": "^0.35.3",
+    "vue": "^3.5.40",
     "vue-router": "^5.0.6"
   },
   "devDependencies": {
-    "@types/archiver": "^7.0.0",
-    "@types/node": "^25.6.0",
+    "@types/archiver": "^8.0.0",
+    "@types/node": "^26.1.1",
     "typescript": "5.9.3",
-    "vue-tsc": "3.1.1"
+    "vue-tsc": "3.3.7"
   },
   "overrides": {
     "esbuild": "^0.28.1",
