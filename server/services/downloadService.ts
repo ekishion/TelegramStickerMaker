@@ -1,4 +1,4 @@
-import archiver from 'archiver'
+import { ZipArchive, type ArchiverError } from 'archiver'
 import type { H3Event } from 'h3'
 import path from 'path'
 import { logger } from '../utils/logger'
@@ -20,17 +20,17 @@ function safeArchiveEntryName(name: string, fallback: string) {
 export async function batchDownload(files: DownloadFile[], event: H3Event) {
   ensureDir(config.paths.temp)
 
-  const archive = archiver('zip', { zlib: { level: 9 } })
+  const archive = new ZipArchive({ zlib: { level: 9 } })
   let archiveError: Error | null = null
 
   event.node.res.setHeader('Content-Type', 'application/zip')
   event.node.res.setHeader('Content-Disposition', `attachment; filename=stickers-${Date.now()}.zip`)
 
-  archive.on('warning', err => {
+  archive.on('warning', (err: ArchiverError) => {
     logger.warn('Archive warning:', err)
   })
 
-  archive.on('error', err => {
+  archive.on('error', (err: ArchiverError) => {
     archiveError = err
     logger.error('Archive error:', err)
     event.node.res.destroy(err)
