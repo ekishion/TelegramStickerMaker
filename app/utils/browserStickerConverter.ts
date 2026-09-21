@@ -291,38 +291,6 @@ async function convertVideoWithMediaRecorder(
   }
 }
 
-async function renderVideoFrames(
-  file: File,
-  onProgress?: (progress: number, message: string) => void
-) {
-  const { video, url, duration } = await loadVideo(file)
-  try {
-    const outputDuration = clampVideoDuration(duration)
-    const dimensions = getStickerDimensions(video.videoWidth || 512, video.videoHeight || 512)
-    const frameCount = Math.max(1, Math.ceil(outputDuration * VIDEO_FRAME_FPS))
-    const canvas = document.createElement('canvas')
-    canvas.width = dimensions.width
-    canvas.height = dimensions.height
-    const ctx = canvas.getContext('2d', { alpha: false })
-    if (!ctx) throw new Error('sys.canvasVideoUnsupported')
-
-    const frames: Blob[] = []
-    for (let index = 0; index < frameCount; index++) {
-      const time = Math.min(index / VIDEO_FRAME_FPS, Math.max(0, outputDuration - 0.001))
-      await seekVideo(video, time)
-      ctx.drawImage(video, 0, 0, dimensions.width, dimensions.height)
-      frames.push(await canvasToBlob(canvas, 'image/jpeg', VIDEO_FRAME_QUALITY))
-      onProgress?.(8 + Math.round(((index + 1) / frameCount) * 32), 'sys.preprocessingFrames')
-    }
-
-    return { frames, width: dimensions.width, height: dimensions.height, duration: outputDuration, fps: VIDEO_FRAME_FPS }
-  } finally {
-    URL.revokeObjectURL(url)
-    video.removeAttribute('src')
-    video.load()
-  }
-}
-
 async function readVideoSize(file: File) {
   const { video, url } = await loadVideo(file)
   try {
@@ -467,86 +435,6 @@ export async function convertImageToTelegramSticker(file: File): Promise<{
       width: size.width,
       height: size.height,
       size: webpBlob.size
-    }
-  }
-}
-
-async function encodeFramesToWebm(
-  file: File,
-  rendered: Awaited<ReturnType<typeof renderVideoFrames>>,
-  onProgress?: (progress: number, message: string) => void
-) {
-  const instance = await loadStickerFfmpeg(message => onProgress?.(42, message))
-  const outputName = `output-${Date.now()}.webm`
-  const framePrefix = `frame-${Date.now()}`
-  const attempts = [
-    { bitrate: '150k', crf: '42' },
-    { bitrate: '100k', crf: '48' },
-    { bitrate: '72k', crf: '52' }
-  ]
-
-  const progressHandler = ({ progress }: { progress: number }) => {
-    onProgress?.(45 + Math.min(50, Math.max(0, Math.round(progress * 50))), 'sys.encodingWebm')
-  }
-
-  instance.on('progress', progressHandler)
-
-  try {
-    for (let index = 0; index < rendered.frames.length; index++) {
-      const name = `${framePrefix}-${String(index + 1).padStart(4, '0')}.jpg`
-      const bytes = new Uint8Array(await rendered.frames[index]!.arrayBuffer())
-      await instance.writeFile(name, bytes)
-    }
-
-    let outputBlob: Blob | null = null
-    for (const attempt of attempts) {
-      await instance.deleteFile(outputName).catch(() => undefined)
-      const code = await instance.exec([
-        '-framerate', String(rendered.fps),
-        '-i', `${framePrefix}-%04d.jpg`,
-        '-t', String(rendered.duration),
-        '-an',
-        '-c:v', 'libvpx-vp9',
-        '-pix_fmt', 'yuva420p',
-        '-b:v', attempt.bitrate,
-        '-crf', attempt.crf,
-        '-deadline', 'realtime',
-        '-cpu-used', '8',
-        '-lag-in-frames', '0',
-        '-auto-alt-ref', '0',
-        outputName
-      ], 120000)
-
-      if (code !== 0) throw new Error('sys.ffmpegConvertFailed')
-      const data = await instance.readFile(outputName)
-      outputBlob = new Blob([toBlobPart(data)], { type: 'video/webm' })
-      if (outputBlob.size <= TELEGRAM_STICKER_LIMITS.maxVideoBytes) break
-    }
-
-    if (!outputBlob) throw new Error('sys.noWebmOutput')
-    const errors = validateTelegramStickerOutput({
-      type: 'video',
-      size: outputBlob.size,
-      width: rendered.width,
-      height: rendered.height,
-      duration: rendered.duration
-    })
-    if (errors.length) throw new LocalizedRuleError(errors)
-
-    return {
-      fileName: objectUrlToFileName('webm'),
-      blob: outputBlob,
-      url: URL.createObjectURL(outputBlob),
-      width: rendered.width,
-      height: rendered.height,
-      duration: rendered.duration,
-      size: outputBlob.size
-    }
-  } finally {
-    instance.off('progress', progressHandler)
-    await instance.deleteFile(outputName).catch(() => undefined)
-    for (let index = 0; index < rendered.frames.length; index++) {
-      await instance.deleteFile(`${framePrefix}-${String(index + 1).padStart(4, '0')}.jpg`).catch(() => undefined)
     }
   }
 }

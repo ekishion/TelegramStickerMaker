@@ -129,12 +129,6 @@
   line-height: 1.4;
 }
 
-.section-grid {
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  gap: var(--gap-xl);
-}
-
 .section-stack {
   display: grid;
   gap: var(--gap-lg);
@@ -160,11 +154,6 @@
 
   .kv-container {
     padding-bottom: max(80px, calc(60px + env(safe-area-inset-bottom)));
-  }
-
-  .section-grid {
-    grid-template-columns: 1fr;
-    gap: var(--gap-lg);
   }
 
   .nav-bar {

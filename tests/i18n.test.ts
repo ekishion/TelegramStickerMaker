@@ -41,7 +41,6 @@ describe('runtime message resolution', () => {
       'sys.encodingVp9Webm',
       'sys.noWebmOutput',
       'sys.convertDone',
-      'sys.preprocessingFrames',
       'sys.canvasImageUnsupported',
       'sys.encodingWebm',
       'sys.ffmpegConvertFailed',

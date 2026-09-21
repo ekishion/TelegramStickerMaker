@@ -1,6 +1,6 @@
 import type { Locale, MessageKey } from '@/locales'
 import { messages } from '@/locales'
-import { isMessageKey } from './runtimeMessage'
+import { resolveRuntimeMessage } from './runtimeMessage'
 
 const STORAGE_KEY = 'locale'
 
@@ -47,7 +47,7 @@ export function useLocale() {
 
   const toggleLocale = () => setLocale(locale.value === 'zh' ? 'en' : 'zh')
 
-  const tRuntime = (raw: string): string => (isMessageKey(raw) ? t(raw) : raw)
+  const tRuntime = (raw: string): string => resolveRuntimeMessage(raw, locale.value)
 
   return { locale, t, tRuntime, setLocale, toggleLocale }
 }

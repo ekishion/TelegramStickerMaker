@@ -1,3 +1,5 @@
+import { triggerDownload } from './download'
+
 export interface ZipEntry {
   name: string
   blob: Blob
@@ -45,10 +47,13 @@ async function deflateRaw(bytes: Uint8Array<ArrayBuffer>) {
 }
 
 /**
- * Build a store-only (no compression) zip in the browser. Small payloads are
- * deflated when the platform supports it; anything else is simply stored.
+ * Build a zip in the browser with no dependency: local headers + central
+ * directory + EOCD written by hand, payloads deflated through the native
+ * Compression Streams API when the platform has it (small payloads only —
+ * anything that does not shrink is simply stored).
+ *
+ * Exported for tests: builds the archive bytes without triggering a download.
  */
-/** Exported for tests: builds the archive bytes without triggering a download. */
 export async function buildZip(entries: ZipEntry[]) {
   const encoder = new TextEncoder()
   const now = dosDateTime(new Date())
@@ -110,17 +115,7 @@ export async function buildZip(entries: ZipEntry[]) {
   return new Blob([...chunks, ...central, end], { type: 'application/zip' })
 }
 
-/** Returns false when the platform cannot build a zip (no Compression Streams). */
-export function canDownloadZip() {
-  return typeof CompressionStream !== 'undefined'
-}
-
 export async function downloadZip(entries: ZipEntry[], fileName: string) {
   const blob = await buildZip(entries)
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = fileName
-  link.click()
-  URL.revokeObjectURL(url)
+  triggerDownload(URL.createObjectURL(blob), fileName)
 }
