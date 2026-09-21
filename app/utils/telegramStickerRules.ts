@@ -3,7 +3,7 @@ export const TELEGRAM_STICKER_LIMITS = {
   maxVideoBytes: 256 * 1024,
   maxSide: 512,
   maxVideoDuration: 3,
-  maxVideoFps: 30,
+  maxVideoWidth: 512,
   maxSourceVideoBytes: 50 * 1024 * 1024
 } as const
 
@@ -21,7 +21,7 @@ export function getStickerDimensions(width: number, height: number) {
   return { width: Math.max(1, Math.round((width / height) * maxSide)), height: maxSide }
 }
 
-export function objectUrlToFileName(_fileName: string, ext: 'png' | 'webp' | 'webm') {
+export function objectUrlToFileName(ext: 'png' | 'webp' | 'webm') {
   const timestamp = Date.now()
   const hash = createBrowserHash(12)
   return `${timestamp}-${hash}.${ext}`
@@ -51,17 +51,17 @@ export function validateTelegramStickerOutput(input: {
     : TELEGRAM_STICKER_LIMITS.maxStaticBytes
 
   if (input.size > maxBytes) {
-    errors.push(`文件超过 Telegram ${input.type === 'video' ? '视频贴纸 256KB' : '静态贴纸 512KB'} 限制`)
+    errors.push(`rule.size.${input.type}`)
   }
   if (input.width && input.height) {
     const max = Math.max(input.width, input.height)
     const min = Math.min(input.width, input.height)
     if (max !== TELEGRAM_STICKER_LIMITS.maxSide || min > TELEGRAM_STICKER_LIMITS.maxSide) {
-      errors.push('贴纸尺寸必须至少一边为 512px，另一边不超过 512px')
+      errors.push('rule.side')
     }
   }
   if (input.type === 'video' && input.duration && input.duration > TELEGRAM_STICKER_LIMITS.maxVideoDuration) {
-    errors.push('视频贴纸时长不能超过 3 秒')
+    errors.push('rule.duration')
   }
 
   return errors

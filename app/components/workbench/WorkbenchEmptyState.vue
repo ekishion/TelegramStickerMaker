@@ -1,9 +1,7 @@
 <template>
   <div class="workbench-empty">
     <div class="workbench-empty__icon">
-      <slot name="icon">
-        <Sticker :size="30" :stroke-width="1.5" />
-      </slot>
+      <Sticker :size="30" :stroke-width="1.5" />
     </div>
     <span class="workbench-empty__title">{{ title }}</span>
     <span v-if="hint" class="workbench-empty__hint">{{ hint }}</span>

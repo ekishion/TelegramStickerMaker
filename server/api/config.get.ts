@@ -8,7 +8,8 @@ export default defineEventHandler(() => {
       maxVideoFiles: config.upload.maxVideoFiles
     },
     sticker: {
-      maxSize: config.sticker.maxSize,
+      maxStaticFileSize: config.sticker.maxStaticFileSize,
+      maxVideoFileSize: config.sticker.maxVideoFileSize,
       maxVideoDuration: config.sticker.maxVideoDuration
     }
   }

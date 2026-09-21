@@ -45,12 +45,14 @@
   </div>
 
   <Lightbox ref="lightboxRef" />
+  <ConfirmDialog />
 </template>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { ArrowLeft, ArrowUpRight, Monitor, Moon, SunMedium } from 'lucide-vue-next'
 import AppFooter from '@/components/common/AppFooter.vue'
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 import Lightbox from '@/components/ui/Lightbox.vue'
 import { initLocaleFromStorage, useLocale } from '@/composables/useLocale'
 import { useLightbox } from '@/composables/useLightbox'

@@ -25,6 +25,9 @@ const getObserver = () => {
  */
 export const vReveal: Directive<HTMLElement, number | undefined> = {
   mounted(el, binding) {
+    // The CSS gates on the [data-reveal] attribute, so the directive has to set
+    // it — without this the observer runs but no rule ever matches.
+    el.setAttribute('data-reveal', '')
     if (typeof binding.value === 'number') {
       el.style.setProperty('--reveal-delay', `${binding.value}ms`)
     }

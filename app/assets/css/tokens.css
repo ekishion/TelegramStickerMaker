@@ -2,7 +2,6 @@
   /* ============ Palette: Paper studio (light) ============ */
   --paper: #f4f4f1;
   --paper-2: #ecece7;
-  --paper-3: #e4e4de;
   --surface: #ffffff;
   --ink: #16161a;
   --ink-2: #55555c;
@@ -27,29 +26,6 @@
   --warn: #b97a0a;
   --warn-soft: rgba(185, 122, 10, 0.12);
 
-  /* Legacy aliases (keep component code terse) */
-  --color-bg: var(--paper);
-  --color-bg-subtle: var(--paper-2);
-  --color-surface: var(--surface);
-  --color-surface-solid: var(--surface);
-  --color-surface-hover: var(--paper-2);
-  --color-text: var(--ink);
-  --color-text-secondary: var(--ink-2);
-  --color-text-tertiary: var(--ink-3);
-  --color-border: var(--line);
-  --color-border-strong: var(--line-strong);
-  --color-accent: var(--accent);
-  --color-accent-strong: var(--accent-ink);
-  --color-accent-hover: var(--accent-ink);
-  --color-accent-light: var(--accent-soft);
-  --color-success: var(--ok);
-  --color-success-light: var(--ok-soft);
-  --color-error: var(--err);
-  --color-error-light: var(--err-soft);
-  --color-warning: var(--warn);
-  --color-warning-light: var(--warn-soft);
-  --color-ink: var(--ink);
-
   /* Typography */
   --font-display: 'Unbounded Variable', 'Noto Sans SC Variable', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   --font-sans: 'Space Grotesk Variable', 'Noto Sans SC Variable', 'PingFang SC', 'Microsoft YaHei', sans-serif;
@@ -67,7 +43,6 @@
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 20px;
-  --radius-xl: 28px;
   --radius-full: 9999px;
 
   /* Shadows, tinted to ink */
@@ -95,7 +70,6 @@
   :root:not([data-theme]) {
     --paper: #0e0e10;
     --paper-2: #17171b;
-    --paper-3: #202026;
     --surface: #1a1a1f;
     --ink: #f2f1ed;
     --ink-2: #b9b8b4;
@@ -128,7 +102,6 @@
 :root[data-theme='dark'] {
   --paper: #0e0e10;
   --paper-2: #17171b;
-  --paper-3: #202026;
   --surface: #1a1a1f;
   --ink: #f2f1ed;
   --ink-2: #b9b8b4;
@@ -160,7 +133,6 @@
 :root[data-theme='light'] {
   --paper: #f4f4f1;
   --paper-2: #ecece7;
-  --paper-3: #e4e4de;
   --surface: #ffffff;
   --ink: #16161a;
   --ink-2: #55555c;

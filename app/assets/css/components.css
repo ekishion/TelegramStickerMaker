@@ -6,63 +6,6 @@
 /* ========== Buttons ==========
    System: primary = ink fill / paper text; accent fill carries ink text;
    ghost + outline for secondary actions. All pill-shaped. */
-.kv-action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 20px;
-  border-radius: var(--radius-full);
-  border: 1px solid transparent;
-  background: var(--ink);
-  color: var(--on-ink);
-  cursor: pointer;
-  font-weight: 700;
-  font-size: 0.85rem;
-  letter-spacing: 0.01em;
-  transition: transform 0.16s var(--ease-out), box-shadow 0.16s var(--ease-out),
-    background 0.16s var(--ease-out), color 0.16s var(--ease-out);
-  white-space: nowrap;
-  min-height: 40px;
-}
-
-.kv-action:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-}
-
-.kv-action:active:not(:disabled) {
-  transform: translateY(0) scale(0.98);
-  box-shadow: none;
-}
-
-.kv-action.secondary {
-  background: var(--surface);
-  color: var(--ink);
-  border-color: var(--line-strong);
-}
-
-.kv-action.secondary:hover:not(:disabled) {
-  border-color: var(--ink);
-}
-
-.kv-action.accent {
-  background: var(--accent);
-  color: var(--on-accent);
-}
-
-.kv-action.accent:hover:not(:disabled) {
-  box-shadow: 0 10px 26px var(--accent-soft-2);
-}
-
-.kv-action:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-/* Workbench button family */
 .tg-workbench {
   display: grid;
   gap: var(--gap-lg);
@@ -188,6 +131,15 @@
   animation: spin 0.6s linear infinite;
 }
 
+/* One-line clamp shared by every compact label */
+.tg-history-chip-title,
+.tg-gallery-name,
+.tg-task-error,
+.tg-history-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 /* ========== Workbench sections ========== */
 .tg-section-actions {
   display: flex;
@@ -384,9 +336,6 @@
 .tg-history-chip-title {
   color: var(--ink-3);
   max-width: 100px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .tg-history-chip-remove {
@@ -540,9 +489,25 @@
   font-size: 0.64rem;
   font-family: var(--font-mono);
   color: var(--ink-2);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+}
+
+.tg-gallery-emoji {
+  width: 100%;
+  margin-top: 4px;
+  padding: 2px 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.tg-gallery-emoji:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 /* ========== Batch bars ========== */
@@ -598,9 +563,6 @@
 .tg-task-error {
   font-family: var(--font-mono);
   font-size: 0.62rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .tg-task-message {
@@ -730,9 +692,6 @@
   font-family: var(--font-mono);
   font-weight: 500;
   color: var(--ink);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .tg-history-meta {
@@ -792,72 +751,6 @@
 .tg-history-actions .tg-btn-ghost {
   padding: 4px 9px;
   font-size: 0.66rem;
-}
-
-/* ========== Empty / error states ========== */
-.empty-state {
-  text-align: center;
-  padding: var(--gap-xl);
-  color: var(--ink-3);
-  font-size: 0.9rem;
-}
-
-.error-text {
-  color: var(--err);
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-
-/* ========== Legacy hooks kept for pages still referencing them ========== */
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  border-radius: var(--radius-full);
-  padding: 4px 12px;
-  background: var(--accent-soft);
-  border: 1px solid var(--accent-soft-2);
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: var(--accent-ink);
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--gap-md);
-}
-
-.form-item {
-  display: grid;
-  gap: 6px;
-  font-size: 0.85rem;
-  color: var(--ink-2);
-}
-
-.form-item label {
-  font-weight: 600;
-  font-size: 0.8rem;
-}
-
-.input-field,
-.select-field {
-  border-radius: var(--radius-md);
-  border: 1px solid var(--line);
-  padding: 10px 14px;
-  background: var(--paper-2);
-  color: var(--ink);
-  font-size: 0.85rem;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-  min-height: 40px;
-  font-family: var(--font-sans);
-}
-
-.input-field:focus,
-.select-field:focus {
-  outline: none;
-  border-color: var(--ink);
 }
 
 /* ========== Responsive ========== */

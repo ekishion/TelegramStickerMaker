@@ -1,6 +1,6 @@
 <template>
   <article class="media-task-card" :class="`is-${status}`">
-    <div class="media-task-card__preview" @click="$emit('preview')">
+    <div class="media-task-card__preview" role="button" tabindex="0" :aria-label="name" @click="$emit('preview')" @keydown.enter.prevent="$emit('preview')" @keydown.space.prevent="$emit('preview')">
       <div class="media-task-card__media">
         <slot name="media" />
       </div>

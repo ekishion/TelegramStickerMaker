@@ -6,6 +6,17 @@ import {
   validateTelegramStickerOutput
 } from './telegramStickerRules'
 
+/**
+ * Carries rule codes out of the converter so callers can localize them via
+ * `t('rule.*')` instead of the util hard-coding Chinese copy.
+ */
+export class LocalizedRuleError extends Error {
+  constructor(public readonly ruleKeys: string[]) {
+    super(ruleKeys.join(';'))
+    this.name = 'LocalizedRuleError'
+  }
+}
+
 export interface BrowserStickerResult {
   fileName: string
   blob: Blob
@@ -19,6 +30,7 @@ export interface BrowserStickerResult {
 export interface DirectStickerCheckResult {
   reusable: boolean
   reason?: string
+  ruleKeys?: string[]
   result?: BrowserStickerResult
 }
 
@@ -28,6 +40,11 @@ type FfmpegInstance = InstanceType<FfmpegModule['FFmpeg']>
 const VIDEO_FRAME_FPS = 30
 const VIDEO_FRAME_QUALITY = 0.82
 const MEDIA_RECORDER_MIME = 'video/webm;codecs=vp9'
+
+/** One sticker is at most 3s, and a missing/NaN duration falls back to that cap. */
+function clampVideoDuration(duration?: number) {
+  return Math.min(duration || TELEGRAM_STICKER_LIMITS.maxVideoDuration, TELEGRAM_STICKER_LIMITS.maxVideoDuration)
+}
 
 let ffmpeg: FfmpegInstance | null = null
 let ffmpegLoading: Promise<void> | null = null
@@ -58,7 +75,7 @@ export async function loadStickerFfmpeg(onProgress?: (message: string) => void) 
     }).then(() => undefined).catch((error) => {
       resetFfmpeg()
       console.error('[ffmpeg] failed to load wasm core', error)
-      throw new Error('ffmpeg.wasm 加载失败，请刷新页面后重试')
+      throw new Error('sys.ffmpegLoadFailed')
     })
   }
 
@@ -74,7 +91,7 @@ function isMemoryError(error: unknown) {
 function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality?: number) {
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(blob => {
-      if (!blob) reject(new Error('浏览器无法导出贴纸图片'))
+      if (!blob) reject(new Error('sys.exportImageFailed'))
       else resolve(blob)
     }, type, quality)
   })
@@ -92,10 +109,16 @@ function loadVideo(file: File) {
     }
     video.onerror = () => {
       URL.revokeObjectURL(url)
-      reject(new Error('浏览器无法解码这个视频，请换 MP4/WEBM 或先转成常见格式'))
+      reject(new Error('sys.videoDecodeFailed'))
     }
     video.src = url
   })
+}
+
+function disposeVideo(video: HTMLVideoElement, url: string) {
+  URL.revokeObjectURL(url)
+  video.removeAttribute('src')
+  video.load()
 }
 
 function seekVideo(video: HTMLVideoElement, time: number) {
@@ -110,7 +133,7 @@ function seekVideo(video: HTMLVideoElement, time: number) {
     }
     const onError = () => {
       cleanup()
-      reject(new Error('视频解码失败'))
+      reject(new Error('sys.videoDecodeError'))
     }
     video.addEventListener('seeked', onSeeked, { once: true })
     video.addEventListener('error', onError, { once: true })
@@ -143,7 +166,7 @@ async function remuxWebmBlob(blob: Blob, onProgress?: (progress: number, message
   const outputName = `remuxed-${Date.now()}.webm`
 
   try {
-    onProgress?.(90, '正在修复 WEBM 元数据')
+    onProgress?.(90, 'sys.fixingWebmMeta')
     await instance.writeFile(inputName, new Uint8Array(await blob.arrayBuffer()))
     const code = await instance.exec([
       '-fflags', '+genpts',
@@ -174,18 +197,16 @@ async function convertVideoWithMediaRecorder(
 ): Promise<BrowserStickerResult> {
   const { video, url, duration } = await loadVideo(file)
   if (!MediaRecorder.isTypeSupported(MEDIA_RECORDER_MIME)) {
-    URL.revokeObjectURL(url)
-    video.removeAttribute('src')
-    video.load()
-    throw new Error('当前浏览器不支持 VP9 WebM 录制，请使用 Chrome/Edge 最新版')
+    disposeVideo(video, url)
+    throw new Error('sys.vp9Unsupported')
   }
-  const outputDuration = Math.min(duration || TELEGRAM_STICKER_LIMITS.maxVideoDuration, TELEGRAM_STICKER_LIMITS.maxVideoDuration)
+  const outputDuration = clampVideoDuration(duration)
   const dimensions = getStickerDimensions(video.videoWidth || 512, video.videoHeight || 512)
   const canvas = document.createElement('canvas')
   canvas.width = dimensions.width
   canvas.height = dimensions.height
   const ctx = canvas.getContext('2d', { alpha: false })
-  if (!ctx) throw new Error('当前浏览器不支持 Canvas 视频预处理')
+  if (!ctx) throw new Error('sys.canvasVideoUnsupported')
 
   ctx.imageSmoothingEnabled = true
   ctx.imageSmoothingQuality = 'high'
@@ -197,7 +218,7 @@ async function convertVideoWithMediaRecorder(
     let bestBlob: Blob | null = null
 
     for (const bitsPerSecond of bitrates) {
-      onProgress?.(8, '正在用浏览器编码 VP9 WebM')
+      onProgress?.(8, 'sys.encodingVp9')
       await seekVideo(video, 0)
       video.playbackRate = 1
       video.muted = true
@@ -211,7 +232,7 @@ async function convertVideoWithMediaRecorder(
         recorder.ondataavailable = event => {
           if (event.data.size > 0) chunks.push(event.data)
         }
-        recorder.onerror = () => reject(new Error('浏览器录制 WEBM 失败'))
+        recorder.onerror = () => reject(new Error('sys.recordWebmFailed'))
         recorder.onstop = () => resolve(new Blob(chunks, { type: MEDIA_RECORDER_MIME }))
       })
 
@@ -220,7 +241,7 @@ async function convertVideoWithMediaRecorder(
       const draw = () => {
         ctx.drawImage(video, 0, 0, dimensions.width, dimensions.height)
         const elapsed = Math.min((performance.now() - startedAt) / 1000, outputDuration)
-        onProgress?.(10 + Math.round((elapsed / outputDuration) * 75), '正在编码 VP9 WebM')
+        onProgress?.(10 + Math.round((elapsed / outputDuration) * 75), 'sys.encodingVp9Webm')
         if (elapsed < outputDuration && !video.ended) {
           rafId = requestAnimationFrame(draw)
         }
@@ -241,7 +262,7 @@ async function convertVideoWithMediaRecorder(
       if (blob.size <= TELEGRAM_STICKER_LIMITS.maxVideoBytes) break
     }
 
-    if (!bestBlob) throw new Error('没有生成 WEBM 输出')
+    if (!bestBlob) throw new Error('sys.noWebmOutput')
     bestBlob = await remuxWebmBlob(bestBlob, onProgress)
     const errors = validateTelegramStickerOutput({
       type: 'video',
@@ -250,11 +271,11 @@ async function convertVideoWithMediaRecorder(
       height: dimensions.height,
       duration: outputDuration
     })
-    if (errors.length) throw new Error(errors.join('；'))
+    if (errors.length) throw new LocalizedRuleError(errors)
 
-    onProgress?.(100, '转换完成')
+    onProgress?.(100, 'sys.convertDone')
     return {
-      fileName: objectUrlToFileName(file.name, 'webm'),
+      fileName: objectUrlToFileName('webm'),
       blob: bestBlob,
       url: URL.createObjectURL(bestBlob),
       width: dimensions.width,
@@ -276,14 +297,14 @@ async function renderVideoFrames(
 ) {
   const { video, url, duration } = await loadVideo(file)
   try {
-    const outputDuration = Math.min(duration || TELEGRAM_STICKER_LIMITS.maxVideoDuration, TELEGRAM_STICKER_LIMITS.maxVideoDuration)
+    const outputDuration = clampVideoDuration(duration)
     const dimensions = getStickerDimensions(video.videoWidth || 512, video.videoHeight || 512)
     const frameCount = Math.max(1, Math.ceil(outputDuration * VIDEO_FRAME_FPS))
     const canvas = document.createElement('canvas')
     canvas.width = dimensions.width
     canvas.height = dimensions.height
     const ctx = canvas.getContext('2d', { alpha: false })
-    if (!ctx) throw new Error('当前浏览器不支持 Canvas 视频预处理')
+    if (!ctx) throw new Error('sys.canvasVideoUnsupported')
 
     const frames: Blob[] = []
     for (let index = 0; index < frameCount; index++) {
@@ -291,7 +312,7 @@ async function renderVideoFrames(
       await seekVideo(video, time)
       ctx.drawImage(video, 0, 0, dimensions.width, dimensions.height)
       frames.push(await canvasToBlob(canvas, 'image/jpeg', VIDEO_FRAME_QUALITY))
-      onProgress?.(8 + Math.round(((index + 1) / frameCount) * 32), '正在预处理视频帧')
+      onProgress?.(8 + Math.round(((index + 1) / frameCount) * 32), 'sys.preprocessingFrames')
     }
 
     return { frames, width: dimensions.width, height: dimensions.height, duration: outputDuration, fps: VIDEO_FRAME_FPS }
@@ -307,9 +328,16 @@ async function readVideoSize(file: File) {
   try {
     return { width: video.videoWidth || 512, height: video.videoHeight || 512 }
   } finally {
-    URL.revokeObjectURL(url)
-    video.removeAttribute('src')
-    video.load()
+    disposeVideo(video, url)
+  }
+}
+
+async function readVideoDuration(file: File) {
+  const { video, url, duration } = await loadVideo(file)
+  try {
+    return Number.isFinite(duration) && duration > 0 ? duration : TELEGRAM_STICKER_LIMITS.maxVideoDuration
+  } finally {
+    disposeVideo(video, url)
   }
 }
 
@@ -329,14 +357,14 @@ export async function resolveReusableWebpSticker(file: File): Promise<DirectStic
     })
 
     if (errors.length) {
-      return { reusable: false, reason: errors.join('，') }
+      return { reusable: false, reason: errors.join('，'), ruleKeys: errors }
     }
 
     const blob = file.slice(0, file.size, 'image/webp')
     return {
       reusable: true,
       result: {
-        fileName: objectUrlToFileName(file.name, 'webp'),
+        fileName: objectUrlToFileName('webp'),
         blob,
         url: URL.createObjectURL(blob),
         width: source.width,
@@ -369,14 +397,14 @@ export async function resolveReusableWebmSticker(file: File): Promise<DirectStic
     })
 
     if (errors.length) {
-      return { reusable: false, reason: errors.join('，') }
+      return { reusable: false, reason: errors.join('，'), ruleKeys: errors }
     }
 
     const blob = file.slice(0, file.size, 'video/webm')
     return {
       reusable: true,
       result: {
-        fileName: objectUrlToFileName(file.name, 'webm'),
+        fileName: objectUrlToFileName('webm'),
         blob,
         url: URL.createObjectURL(blob),
         width,
@@ -403,7 +431,7 @@ export async function convertImageToTelegramSticker(file: File): Promise<{
   canvas.height = size.height
 
   const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('当前浏览器不支持 Canvas 图片转换')
+  if (!ctx) throw new Error('sys.canvasImageUnsupported')
   ctx.clearRect(0, 0, size.width, size.height)
   ctx.drawImage(source, 0, 0, size.width, size.height)
   source.close()
@@ -425,7 +453,7 @@ export async function convertImageToTelegramSticker(file: File): Promise<{
 
   return {
     png: {
-      fileName: objectUrlToFileName(file.name, 'png'),
+      fileName: objectUrlToFileName('png'),
       blob: pngBlob,
       url: URL.createObjectURL(pngBlob),
       width: size.width,
@@ -433,7 +461,7 @@ export async function convertImageToTelegramSticker(file: File): Promise<{
       size: pngBlob.size
     },
     webp: {
-      fileName: objectUrlToFileName(file.name, 'webp'),
+      fileName: objectUrlToFileName('webp'),
       blob: webpBlob,
       url: URL.createObjectURL(webpBlob),
       width: size.width,
@@ -458,7 +486,7 @@ async function encodeFramesToWebm(
   ]
 
   const progressHandler = ({ progress }: { progress: number }) => {
-    onProgress?.(45 + Math.min(50, Math.max(0, Math.round(progress * 50))), '正在编码 WEBM')
+    onProgress?.(45 + Math.min(50, Math.max(0, Math.round(progress * 50))), 'sys.encodingWebm')
   }
 
   instance.on('progress', progressHandler)
@@ -489,13 +517,13 @@ async function encodeFramesToWebm(
         outputName
       ], 120000)
 
-      if (code !== 0) throw new Error('ffmpeg.wasm 转换失败')
+      if (code !== 0) throw new Error('sys.ffmpegConvertFailed')
       const data = await instance.readFile(outputName)
       outputBlob = new Blob([toBlobPart(data)], { type: 'video/webm' })
       if (outputBlob.size <= TELEGRAM_STICKER_LIMITS.maxVideoBytes) break
     }
 
-    if (!outputBlob) throw new Error('没有生成 WEBM 输出')
+    if (!outputBlob) throw new Error('sys.noWebmOutput')
     const errors = validateTelegramStickerOutput({
       type: 'video',
       size: outputBlob.size,
@@ -503,10 +531,10 @@ async function encodeFramesToWebm(
       height: rendered.height,
       duration: rendered.duration
     })
-    if (errors.length) throw new Error(errors.join('；'))
+    if (errors.length) throw new LocalizedRuleError(errors)
 
     return {
-      fileName: objectUrlToFileName(file.name, 'webm'),
+      fileName: objectUrlToFileName('webm'),
       blob: outputBlob,
       url: URL.createObjectURL(outputBlob),
       width: rendered.width,
@@ -536,7 +564,7 @@ async function convertGifWithFfmpeg(
   const outputName = `output-${Date.now()}.webm`
 
   const progressHandler = ({ progress }: { progress: number }) => {
-    onProgress?.(Math.min(95, Math.max(10, Math.round(progress * 85))), '正在转换 GIF')
+    onProgress?.(Math.min(95, Math.max(10, Math.round(progress * 85))), 'sys.convertingGif')
   }
 
   instance.on('progress', progressHandler)
@@ -560,25 +588,29 @@ async function convertGifWithFfmpeg(
       outputName
     ], 120000)
 
-    if (code !== 0) throw new Error('ffmpeg.wasm 转换失败')
+    if (code !== 0) throw new Error('sys.ffmpegConvertFailed')
     const data = await instance.readFile(outputName)
     const blob = new Blob([toBlobPart(data)], { type: 'video/webm' })
     const size = await readVideoSize(new File([blob], outputName, { type: 'video/webm' })).catch(() => ({ width: 512, height: 512 }))
+    // `-t 3` only caps an over-long GIF; a short one stays shorter, so read the
+    // real duration instead of claiming the cap.
+    const duration = await readVideoDuration(new File([blob], outputName, { type: 'video/webm' }))
+      .catch(() => TELEGRAM_STICKER_LIMITS.maxVideoDuration)
     const errors = validateTelegramStickerOutput({
       type: 'video',
       size: blob.size,
       width: size.width,
       height: size.height,
-      duration: TELEGRAM_STICKER_LIMITS.maxVideoDuration
+      duration
     })
-    if (errors.length) throw new Error(errors.join('；'))
+    if (errors.length) throw new LocalizedRuleError(errors)
     return {
-      fileName: objectUrlToFileName(file.name, 'webm'),
+      fileName: objectUrlToFileName('webm'),
       blob,
       url: URL.createObjectURL(blob),
       width: size.width,
       height: size.height,
-      duration: TELEGRAM_STICKER_LIMITS.maxVideoDuration,
+      duration,
       size: blob.size
     }
   } finally {
@@ -594,7 +626,7 @@ export async function convertVideoToTelegramSticker(
   onProgress?: (progress: number, message: string) => void
 ): Promise<BrowserStickerResult> {
   if (file.size > TELEGRAM_STICKER_LIMITS.maxSourceVideoBytes) {
-    throw new Error('源视频超过 50MB，请先裁剪后再转换，避免浏览器内存溢出')
+    throw new Error('sys.sourceTooLarge')
   }
 
   try {
@@ -607,7 +639,7 @@ export async function convertVideoToTelegramSticker(
     console.error('[ffmpeg] convert failed', error)
     if (isMemoryError(error)) {
       resetFfmpeg()
-      throw new Error('浏览器内存不足，已重置 ffmpeg。请换更短/更小的视频，或先裁剪到 3 秒以内再试')
+      throw new Error('sys.outOfMemory')
     }
     throw error
   }

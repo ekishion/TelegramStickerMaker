@@ -149,6 +149,16 @@
             </span>
           </div>
           <div class="tg-gallery-name">{{ file.name }}</div>
+          <input
+            v-if="selectedFiles.includes(file.id)"
+            class="tg-gallery-emoji"
+            type="text"
+            maxlength="4"
+            :value="emojiFor(file.id)"
+            :aria-label="`${t('tg.emojiLabel')} ${file.name}`"
+            @click.stop
+            @input="setEmojiFor(file.id, ($event.target as HTMLInputElement).value)"
+          />
         </button>
       </div>
 
@@ -160,7 +170,36 @@
           <span v-if="uploadResult" class="tg-result-chip" :class="uploadResult.failed ? 'warn' : 'ok'">
             {{ t('tg.uploadResult', { success: uploadResult.success, failed: uploadResult.failed }) }}
           </span>
+          <a
+            v-if="uploadResult?.packUrl"
+            class="tg-result-chip ok"
+            :href="uploadResult.packUrl"
+            target="_blank"
+            rel="noopener"
+          >
+            <ExternalLink :size="13" :stroke-width="2" />
+            {{ t('tg.packLink') }}
+          </a>
+          <button
+            v-if="uploadResult && uploadResult.failed > 0"
+            class="tg-result-chip warn tg-result-chip-btn"
+            type="button"
+            :disabled="uploading"
+            @click="retryFailed"
+          >
+            <RefreshCw :size="13" :stroke-width="2" />
+            {{ t('tg.retryFailed') }}
+          </button>
           <span v-if="cacheMessage" class="tg-result-chip" :class="cacheOk ? 'ok' : 'warn'">{{ cacheMessage }}</span>
+          <div v-if="uploadResult?.failedFiles?.length" class="tg-failed-list">
+            <div class="tg-failed-title">{{ t('tg.failedTitle') }}</div>
+            <ul>
+              <li v-for="file in uploadResult.failedFiles.slice(0, 8)" :key="file.fileName + file.index">
+                <span class="tg-failed-name">{{ file.fileName }}</span>
+                <span class="tg-failed-reason">{{ file.error }}</span>
+              </li>
+            </ul>
+          </div>
         </div>
         <button class="tg-btn-primary is-accent" type="button" @click="startUpload" :disabled="!canUpload || uploading">
           <CloudUpload v-if="!uploading" :size="15" :stroke-width="2" />
@@ -179,6 +218,7 @@ import {
   CircleCheck,
   CircleX,
   CloudUpload,
+  ExternalLink,
   KeyRound,
   Package,
   PenLine,
@@ -193,6 +233,7 @@ import {
 import WorkbenchEmptyState from '@/components/workbench/WorkbenchEmptyState.vue'
 import WorkbenchSection from '@/components/workbench/WorkbenchSection.vue'
 import { useLocale } from '@/composables/useLocale'
+import { useConfirm } from '@/composables/useConfirm'
 import { useObjectUrlRegistry } from '@/composables/useObjectUrlRegistry'
 import { useHistoryStore } from '@/stores/history'
 import {
@@ -203,6 +244,7 @@ import {
 } from '@/utils/browserStickerStore'
 
 const { t } = useLocale()
+const { confirm } = useConfirm()
 
 interface OutputFile extends CachedStickerFile {
   url: string
@@ -231,6 +273,7 @@ const userId = ref('')
 const packName = ref('')
 const packTitle = ref('')
 const emoji = ref('')
+const perFileEmojis = ref<Record<string, string>>({})
 const validating = ref(false)
 const botInfo = ref<BotInfo | null>(null)
 const tokenError = ref('')
@@ -239,7 +282,12 @@ const selectedFiles = ref<string[]>([])
 const loadingFiles = ref(false)
 const clearingCache = ref(false)
 const uploading = ref(false)
-const uploadResult = ref<{ success: number; failed: number } | null>(null)
+const uploadResult = ref<{
+  success: number
+  failed: number
+  packUrl?: string | null
+  failedFiles?: { fileName: string; index: number; error: string }[]
+} | null>(null)
 const cacheMessage = ref('')
 const cacheOk = ref(true)
 const packHistory = ref<PackEntry[]>([])
@@ -373,6 +421,14 @@ const loadOutputFiles = async () => {
 }
 
 const clearAllCache = async () => {
+  const ok = await confirm({
+    title: t('tg.confirmClearTitle'),
+    message: t('tg.confirmClearBody'),
+    confirmText: t('tg.btn.clearCache'),
+    danger: true
+  })
+  if (!ok) return
+
   clearingCache.value = true
   cacheMessage.value = ''
 
@@ -402,6 +458,12 @@ const toggleSelectAll = () => {
   selectedFiles.value = allSelected.value ? [] : outputFiles.value.map(file => file.id)
 }
 
+/** Per-sticker emoji defaults to the global one until the user edits it. */
+const emojiFor = (id: string) => perFileEmojis.value[id] ?? emoji.value ?? '🙂'
+const setEmojiFor = (id: string, value: string) => {
+  perFileEmojis.value = { ...perFileEmojis.value, [id]: value.trim() }
+}
+
 const startUpload = async () => {
   if (!canUpload.value) return
 
@@ -422,21 +484,43 @@ const startUpload = async () => {
       formData.append('stickers', file.blob, file.name)
     }
 
+    // Only send the array when at least one sticker deviates from the global
+    // emoji, so the server's per-sticker branch stays opt-in.
+    const emojis = selectedOutputs.map(file => emojiFor(file.id))
+    if (emojis.some(value => value !== (emoji.value || '🙂'))) {
+      formData.append('emojis', JSON.stringify(emojis))
+    }
+
     const res = await fetch('/api/telegram/upload', {
       method: 'POST',
       body: formData
     })
-    const data = await res.json()
+    const data = await res.json().catch(() => ({}))
 
     if (!res.ok) throw new Error(data.error || data.message || t('tg.err.upload'))
 
-    uploadResult.value = data.results || { success: 0, failed: 0 }
+    const results = data.results || { success: 0, failed: 0 }
+    uploadResult.value = {
+      success: results.success,
+      failed: results.failed,
+      packUrl: data.packUrl ?? null,
+      failedFiles: Array.isArray(results.failedFiles) ? results.failedFiles : []
+    }
     addPackToHistory()
   } catch (error: any) {
-    uploadResult.value = { success: 0, failed: selectedFiles.value.length }
+    uploadResult.value = { success: 0, failed: selectedFiles.value.length, packUrl: null, failedFiles: [] }
     tokenError.value = error.message
   } finally {
     uploading.value = false
   }
+}
+
+const retryFailed = async () => {
+  const failedNames = new Set((uploadResult.value?.failedFiles || []).map(file => file.fileName))
+  const retriable = outputFiles.value.filter(file => failedNames.has(file.name)).map(file => file.id)
+  if (!retriable.length) return
+
+  selectedFiles.value = retriable
+  await startUpload()
 }
 </script>

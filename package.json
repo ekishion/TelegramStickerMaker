@@ -11,12 +11,12 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "typecheck": "nuxt typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "postinstall": "nuxt prepare && node scripts/copy-ffmpeg-assets.mjs",
     "copy:ffmpeg": "node scripts/copy-ffmpeg-assets.mjs"
   },
   "dependencies": {
-    "@emnapi/core": "^1.11.3",
-    "@emnapi/runtime": "^1.11.3",
     "@ffmpeg/core": "^0.12.10",
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
@@ -25,20 +25,17 @@
     "@fontsource-variable/space-grotesk": "^5.3.0",
     "@fontsource-variable/unbounded": "^5.3.0",
     "@pinia/nuxt": "^1.0.2",
-    "archiver": "^8.0.0",
-    "form-data": "^4.0.6",
     "lucide-vue-next": "^0.577.0",
     "nuxt": "^4.5.2",
-    "oxc-parser": "^0.149.0",
     "pinia": "^4.0.3",
     "sharp": "^0.35.4",
     "vue": "^3.5.42",
     "vue-router": "^5.3.1"
   },
   "devDependencies": {
-    "@types/archiver": "^8.0.0",
     "@types/node": "^26.5.1",
     "typescript": "5.9.3",
+    "vitest": "^5.0.1",
     "vue-tsc": "3.3.11"
   },
   "overrides": {

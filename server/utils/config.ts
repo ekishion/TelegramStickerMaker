@@ -1,14 +1,4 @@
-import path from 'path'
-import os from 'os'
-
-const rootDir = process.cwd()
-
 export const config = {
-  env: process.env.NODE_ENV || 'development',
-  paths: {
-    root: rootDir,
-    temp: path.join(os.tmpdir(), 'telegram-sticker-maker')
-  },
   upload: {
     maxFileSize: 52428800,
     maxImageFiles: 200,
@@ -24,13 +14,9 @@ export const config = {
     ]
   },
   sticker: {
-    maxSize: 512,
-    maxVideoDuration: 3,
-    videoFps: 30,
+    maxStaticFileSize: 512 * 1024,
     maxVideoFileSize: 256 * 1024,
-    imageQuality: {
-      webp: 90,
-      png: 9
-    }
+    maxSide: 512,
+    maxVideoDuration: 3
   }
 }

@@ -25,6 +25,7 @@ interface Chip {
   freq: number
 }
 
+// The host is always the wrapper div in the template above.
 const hostRef = ref<HTMLElement | null>(null)
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 
@@ -309,18 +310,23 @@ onMounted(() => {
   const themeObserver = new MutationObserver(onThemeFlip)
   themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
 
-  resizeObserver = new ResizeObserver(() => {
+  // Locals (not the module-level lets) so the observe() calls keep a narrowed,
+  // non-null observer type; the module-level refs are only for teardown.
+  const observed: Element = host as unknown as Element
+  const ro = new ResizeObserver(() => {
     resize()
     if (!running) staticRender()
   })
-  resizeObserver.observe(host)
+  resizeObserver = ro
+  ro.observe(observed)
 
-  viewObserver = new IntersectionObserver(([entry]) => {
+  const vo = new IntersectionObserver(([entry]) => {
     inView = !!entry?.isIntersecting
     if (inView) start()
     else stop()
   }, { threshold: 0 })
-  viewObserver.observe(host)
+  viewObserver = vo
+  vo.observe(observed)
 
   const onVisibility = () => {
     if (document.hidden) stop()

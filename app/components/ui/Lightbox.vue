@@ -2,7 +2,7 @@
   <Teleport to="body">
     <Transition name="lightbox">
       <div v-if="visible" class="lightbox-overlay" @click.self="close">
-        <div class="lightbox-container">
+        <div ref="containerRef" class="lightbox-container" role="dialog" aria-modal="true" :aria-label="item?.name">
           <div class="lightbox-header">
             <div class="lightbox-info">
               <strong>{{ item?.name }}</strong>
@@ -28,6 +28,7 @@
 </template>
 
 <script setup lang="ts">
+import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { Download, X } from 'lucide-vue-next'
 import { useLocale } from '@/composables/useLocale'
 
@@ -45,15 +46,21 @@ export interface LightboxItem {
 const visible = ref(false)
 const item = ref<LightboxItem | null>(null)
 
+const containerRef = ref<HTMLElement | null>(null)
+let previouslyFocused: HTMLElement | null = null
+
 const open = (data: LightboxItem) => {
+  previouslyFocused = document.activeElement as HTMLElement | null
   item.value = data
   visible.value = true
   document.body.style.overflow = 'hidden'
+  nextTick(() => containerRef.value?.querySelector<HTMLElement>('.lightbox-btn')?.focus())
 }
 
 const close = () => {
   visible.value = false
   document.body.style.overflow = ''
+  previouslyFocused?.focus?.()
 }
 
 const onKeydown = (e: KeyboardEvent) => {

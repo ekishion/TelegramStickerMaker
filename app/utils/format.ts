@@ -4,11 +4,15 @@ export function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
 }
 
-export function formatTimestamp(timestamp: number): string {
-  const date = new Date(timestamp)
-  return `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, '0')}:${String(
-    date.getMinutes()
-  ).padStart(2, '0')}`
+export function formatDayLabel(dateKey: string, locale: string): string {
+  const [year, month, day] = dateKey.split('-').map(Number)
+  if (!year || !month || !day) return dateKey
+  const date = new Date(year, month - 1, day)
+  return new Intl.DateTimeFormat(locale === 'zh' ? 'zh-CN' : 'en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  }).format(date)
 }
 
 export function groupByDay<T extends { timestamp: number }>(items: T[]): Record<string, T[]> {

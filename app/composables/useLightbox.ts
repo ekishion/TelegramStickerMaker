@@ -13,9 +13,5 @@ export function useLightbox() {
     lightboxRef.value?.open({ type: 'video', src, name, meta, downloadUrl, downloadName: name })
   }
 
-  const open = (item: LightboxItem) => {
-    lightboxRef.value?.open(item)
-  }
-
-  return { setRef, openImage, openVideo, open }
+  return { setRef, openImage, openVideo }
 }

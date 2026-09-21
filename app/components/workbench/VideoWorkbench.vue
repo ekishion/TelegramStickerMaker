@@ -58,8 +58,8 @@
             </template>
 
             <template #extra>
-              <div v-if="task.status === 'converting' && task.message" class="tg-task-message">{{ task.message }}</div>
-              <div v-if="task.error" class="tg-task-error">{{ task.error }}</div>
+              <div v-if="task.status === 'converting' && task.messageKey" class="tg-task-message">{{ tRuntime(task.messageKey) }}</div>
+              <div v-if="task.errorKeys.length" class="tg-task-error">{{ errorText(task) }}</div>
             </template>
 
             <template #actions>
@@ -96,12 +96,16 @@ import { useLightbox } from '@/composables/useLightbox'
 import { useObjectUrlRegistry } from '@/composables/useObjectUrlRegistry'
 import { useHistoryStore } from '@/stores/history'
 import { formatFileSize } from '@/utils/format'
-import { saveCachedSticker } from '@/utils/browserStickerStore'
-import { convertVideoToTelegramSticker, resolveReusableWebmSticker } from '@/utils/browserStickerConverter'
+import { StickerStorageFullError, saveCachedSticker } from '@/utils/browserStickerStore'
+import { LocalizedRuleError, convertVideoToTelegramSticker, resolveReusableWebmSticker } from '@/utils/browserStickerConverter'
 import { TELEGRAM_STICKER_LIMITS } from '@/utils/telegramStickerRules'
 import { useLocale } from '@/composables/useLocale'
 
-const { t, tRaw } = useLocale()
+const { t, tRuntime, locale } = useLocale()
+
+/** Keys → localized text, resolved per render so language switches apply. */
+const errorText = (task: VideoTask) =>
+  task.errorKeys.map(key => tRuntime(key)).join(locale.value === 'zh' ? '；' : '; ')
 
 interface VideoTaskResult {
   filename: string
@@ -120,36 +124,43 @@ interface VideoTask {
   previewUrl: string
   status: 'pending' | 'converting' | 'done' | 'error'
   progress: number
-  message: string
+  /** i18n keys, translated on render so a language switch re-renders them */
+  messageKey: string
+  errorKeys: string[]
   result: VideoTaskResult | null
-  error: string
 }
 
-const statusText = (status: VideoTask['status']) => ({
-  pending: t('status.pending'),
-  converting: t('status.converting'),
-  done: t('status.done'),
-  error: t('status.error')
-}[status])
-
-const tasks = ref<VideoTask[]>([])
 const limits = reactive({ maxVideoFiles: 100 })
 const historyStore = useHistoryStore()
 const lightbox = useLightbox()
 const objectUrls = useObjectUrlRegistry()
 
-const converting = ref(false)
-const convertStatus = ref('')
-const currentTaskIndex = ref(0)
-const totalTasks = ref(0)
+const VIDEO_ACCEPT = ['image/gif', 'video/mp4', 'video/webm']
 
-const overallProgress = computed(() => {
-  if (totalTasks.value === 0) return 0
-  return Math.round((currentTaskIndex.value / totalTasks.value) * 100)
+const {
+  tasks,
+  statusText,
+  pendingCount,
+  doneCount,
+  addFiles,
+  removeTask,
+  clearAll
+} = useMediaQueue<VideoTask>({
+  accept: VIDEO_ACCEPT,
+  maxFiles: () => limits.maxVideoFiles,
+  createTask: (file) => ({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    file,
+    name: file.name,
+    previewUrl: objectUrls.create(file),
+    status: file.size > TELEGRAM_STICKER_LIMITS.maxSourceVideoBytes ? 'error' : 'pending',
+    progress: 0,
+    messageKey: '',
+    errorKeys: file.size > TELEGRAM_STICKER_LIMITS.maxSourceVideoBytes ? ['video.err.tooLarge'] : [],
+    result: null
+  }),
+  releaseUrls: task => releaseTaskUrls(task)
 })
-
-const pendingCount = computed(() => tasks.value.filter(task => task.status === 'pending').length)
-const doneCount = computed(() => tasks.value.filter(task => task.status === 'done').length)
 
 onMounted(async () => {
   try {
@@ -167,29 +178,26 @@ const releaseTaskUrls = (task: VideoTask) => {
 }
 
 const handleFilesSelected = (files: File[]) => {
-  const valid = files.filter(file => ['image/gif', 'video/mp4', 'video/webm'].includes(file.type))
-  valid.slice(0, limits.maxVideoFiles).forEach(file => {
-    tasks.value.push({
-      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      file,
-      name: file.name,
-      previewUrl: objectUrls.create(file),
-      status: file.size > TELEGRAM_STICKER_LIMITS.maxSourceVideoBytes ? 'error' : 'pending',
-      progress: 0,
-      message: '',
-      result: null,
-      error: file.size > TELEGRAM_STICKER_LIMITS.maxSourceVideoBytes ? t('video.err.tooLarge') : ''
-    })
-  })
+  addFiles(files)
 }
 
 const convertSingle = async (task: VideoTask) => {
   if (task.status === 'converting') return
 
+  // Oversized sources never reach ffmpeg: re-affirm the (already translated)
+  // message instead of running a pipeline that can only fail the same way.
+  if (task.file.size > TELEGRAM_STICKER_LIMITS.maxSourceVideoBytes) {
+    task.status = 'error'
+    task.progress = 0
+    task.messageKey = ''
+    task.errorKeys = ['video.err.tooLarge']
+    return
+  }
+
   task.status = 'converting'
   task.progress = 5
-  task.message = t('video.msg.prepare')
-  task.error = ''
+  task.messageKey = 'video.msg.prepare'
+  task.errorKeys = []
 
   try {
     const reusableWebm = await resolveReusableWebmSticker(task.file)
@@ -208,7 +216,7 @@ const convertSingle = async (task: VideoTask) => {
 
       task.status = 'done'
       task.progress = 100
-      task.message = t('video.msg.reused')
+      task.messageKey = 'video.msg.reused'
       task.result = {
         filename: reusableWebm.result.fileName,
         url: objectUrls.track(reusableWebm.result.url),
@@ -230,9 +238,11 @@ const convertSingle = async (task: VideoTask) => {
       return
     }
 
-    const converted = await convertVideoToTelegramSticker(task.file, (progress, message) => {
+    if (reusableWebm.ruleKeys?.length) throw new LocalizedRuleError(reusableWebm.ruleKeys)
+
+    const converted = await convertVideoToTelegramSticker(task.file, (progress, key) => {
       task.progress = progress
-      task.message = tRaw(message)
+      task.messageKey = key
     })
 
     const cache = await saveCachedSticker({
@@ -248,7 +258,7 @@ const convertSingle = async (task: VideoTask) => {
 
     task.status = 'done'
     task.progress = 100
-    task.message = t('video.msg.done')
+    task.messageKey = 'video.msg.done'
     task.result = {
       filename: converted.fileName,
       url: objectUrls.track(converted.url),
@@ -269,9 +279,23 @@ const convertSingle = async (task: VideoTask) => {
     })
   } catch (error: any) {
     task.status = 'error'
-    task.error = (error.message && tRaw(error.message)) || t('video.err.convert')
+    task.errorKeys = error instanceof StickerStorageFullError
+      ? ['sys.storageFull']
+      : error instanceof LocalizedRuleError
+        ? error.ruleKeys
+        : [error.message || 'video.err.convert']
   }
 }
+
+const converting = ref(false)
+const convertStatus = ref('')
+const currentTaskIndex = ref(0)
+const totalTasks = ref(0)
+
+const overallProgress = computed(() => {
+  if (totalTasks.value === 0) return 0
+  return Math.round((currentTaskIndex.value / totalTasks.value) * 100)
+})
 
 const convertAll = async () => {
   const pending = tasks.value.filter(task => task.status === 'pending')
@@ -293,10 +317,7 @@ const convertAll = async () => {
 
 const downloadOne = (task: VideoTask) => {
   if (!task.result?.url) return
-  const link = document.createElement('a')
-  link.href = task.result.url
-  link.download = task.result.filename
-  link.click()
+  triggerDownload(task.result.url, task.result.filename)
 }
 
 const downloadAll = () => {
@@ -305,19 +326,9 @@ const downloadAll = () => {
   }
 }
 
-const removeTask = (id: string) => {
-  const task = tasks.value.find(item => item.id === id)
-  if (task) releaseTaskUrls(task)
-  tasks.value = tasks.value.filter(item => item.id !== id)
-}
-
-const clearAll = () => {
-  tasks.value.forEach(releaseTaskUrls)
-  tasks.value = []
-}
-
 const openPreview = (task: VideoTask) => {
-  lightbox.openVideo(task.result?.url || task.previewUrl, task.name, formatFileSize(task.result?.size || task.file.size))
+  const src = task.result?.url || task.previewUrl
+  lightbox.openVideo(src, task.name, formatFileSize(task.result?.size || task.file.size), task.result?.url)
 }
 </script>
 

@@ -6,9 +6,11 @@
       </template>
 
       <Transition name="tab-panel" mode="out-in">
-        <KeepAlive>
-          <component :is="activePanel" />
-        </KeepAlive>
+        <div :id="`panel-${activeTab}`" role="tabpanel" :aria-labelledby="`tab-${activeTab}`" tabindex="0">
+          <KeepAlive>
+            <component :is="activePanel" />
+          </KeepAlive>
+        </div>
       </Transition>
     </WorkbenchShell>
   </main>
@@ -35,7 +37,7 @@ useHead(() => ({
 const tabs = computed(() => [
   { key: 'image', label: t('dash.tab.image') },
   { key: 'video', label: t('dash.tab.video') },
-  { key: 'telegram', label: 'Telegram' },
+  { key: 'telegram', label: t('dash.tab.telegram') },
   { key: 'history', label: t('dash.tab.history') }
 ])
 

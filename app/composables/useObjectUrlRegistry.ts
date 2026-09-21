@@ -8,7 +8,7 @@ export function useObjectUrlRegistry() {
     return url || ''
   }
 
-  const create = (blob: Blob | MediaSource) => track(URL.createObjectURL(blob))
+  const create = (blob: Blob) => track(URL.createObjectURL(blob))
 
   const revoke = (url?: string | null) => {
     if (!url || !urls.has(url)) return

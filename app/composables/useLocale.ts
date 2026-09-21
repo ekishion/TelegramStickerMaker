@@ -1,5 +1,6 @@
 import type { Locale, MessageKey } from '@/locales'
 import { messages } from '@/locales'
+import { isMessageKey } from './runtimeMessage'
 
 const STORAGE_KEY = 'locale'
 
@@ -8,16 +9,10 @@ const isLocale = (value: unknown): value is Locale => value === 'zh' || value ==
 const htmlLang = (locale: Locale) => (locale === 'zh' ? 'zh-CN' : 'en')
 
 /**
- * Runtime strings thrown by utils are authored as the zh dictionary values.
- * Match them back to their key so the active language wins; anything unknown
- * passes through untouched.
+ * Runtime strings (converter progress messages and thrown errors) arrive as
+ * message keys; see runtimeMessage.ts. Anything that is not a key is a raw
+ * platform message and passes through untouched.
  */
-const sysReverse = new Map<string, MessageKey>(
-  Object.entries(messages.zh)
-    .filter(([key]) => key.startsWith('sys.'))
-    .map(([key, value]) => [value as string, key as MessageKey])
-)
-
 export function useLocale() {
   // useState keeps the value per SSR request and shared across client navigations
   const locale = useState<Locale>('locale', () => 'zh')
@@ -52,12 +47,9 @@ export function useLocale() {
 
   const toggleLocale = () => setLocale(locale.value === 'zh' ? 'en' : 'zh')
 
-  const tRaw = (raw: string): string => {
-    const key = sysReverse.get(raw)
-    return key ? t(key) : raw
-  }
+  const tRuntime = (raw: string): string => (isMessageKey(raw) ? t(raw) : raw)
 
-  return { locale, t, tRaw, setLocale, toggleLocale }
+  return { locale, t, tRuntime, setLocale, toggleLocale }
 }
 
 /**

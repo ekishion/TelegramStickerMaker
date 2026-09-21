@@ -17,6 +17,12 @@ html {
   color-scheme: dark;
 }
 
+/* An explicit Light choice must also override a dark OS preference,
+   otherwise native widgets (scrollbars, selects, overscroll) stay dark. */
+[data-theme='light'] {
+  color-scheme: light;
+}
+
 body {
   font-family: var(--font-sans);
   color: var(--ink);

@@ -62,6 +62,7 @@ const zh = {
   'dash.tab.image': '静态贴纸',
   'dash.tab.video': '视频贴纸',
   'dash.tab.history': '历史记录',
+  'dash.tab.telegram': 'Telegram',
 
   /* workbench shell */
   'wb.title': '贴纸工作区',
@@ -93,6 +94,10 @@ const zh = {
   'image.btn.remove': '移除',
   'image.btn.clear': '清空',
   'image.err.convert': '转换失败',
+  'rule.size.static': '静态贴纸文件超过 512KB 限制',
+  'rule.size.video': '视频贴纸文件超过 256KB 限制',
+  'rule.side': '贴纸尺寸必须至少一边为 512px，另一边不超过 512px',
+  'rule.duration': '视频贴纸时长不能超过 3 秒',
 
   /* video workbench */
   'video.s1.title': '视频贴纸转换',
@@ -140,9 +145,15 @@ const zh = {
   'tg.selectAll': '全选',
   'tg.deselectAll': '取消全选',
   'tg.uploadResult': '成功 {success} / 失败 {failed}',
+  'tg.packLink': '打开贴纸包',
+  'tg.retryFailed': '重试失败项',
+  'tg.failedTitle': '失败详情',
+  'tg.emojiLabel': '该贴纸的 emoji',
   'tg.btn.upload': '上传到 Telegram',
   'tg.btn.uploading': '上传中...',
   'tg.cache.cleared': '缓存和历史已清空',
+  'tg.confirmClearTitle': '清空贴纸缓存？',
+  'tg.confirmClearBody': '将删除浏览器内所有已转换的贴纸文件和对应的历史记录，且无法恢复。',
 
   /* history panel */
   'history.s1.title': '历史档案',
@@ -159,6 +170,8 @@ const zh = {
   'history.btn.removeSelected': '删除所选',
   'history.btn.download': '批量下载',
   'history.btn.clear': '清空历史',
+  'history.confirmClearTitle': '清空全部历史？',
+  'history.confirmClearBody': '将删除所有历史记录以及浏览器内已转换的贴纸文件，且无法恢复。',
   'history.group.selectAll': '全选',
   'history.tagInput': '添加标签',
   'history.s2.title': '空历史',
@@ -189,7 +202,7 @@ const zh = {
   'aria.formatFilter': '格式筛选',
   'aria.tagFilter': '标签筛选',
 
-  /* runtime strings surfaced from utils (matched back by value via tRaw) */
+  /* runtime strings surfaced from utils as message keys (see tRuntime) */
   'sys.ffmpegLoadFailed': 'ffmpeg.wasm 加载失败，请刷新页面后重试',
   'sys.exportImageFailed': '浏览器无法导出贴纸图片',
   'sys.videoDecodeFailed': '浏览器无法解码这个视频，请换 MP4/WEBM 或先转成常见格式',
@@ -208,6 +221,9 @@ const zh = {
   'sys.ffmpegConvertFailed': 'ffmpeg.wasm 转换失败',
   'sys.convertingGif': '正在转换 GIF',
   'sys.sourceTooLarge': '源视频超过 50MB，请先裁剪后再转换，避免浏览器内存溢出',
+  'sys.storageFull': '浏览器存储已满，请先清空历史或缓存后再转换',
+  'sys.confirm': '确认',
+  'sys.cancel': '取消',
   'sys.outOfMemory': '浏览器内存不足，已重置 ffmpeg。请换更短/更小的视频，或先裁剪到 3 秒以内再试',
 
   /* telegram cache errors */
@@ -280,6 +296,7 @@ const en: Record<MessageKey, string> = {
   'dash.tab.image': 'Static',
   'dash.tab.video': 'Video',
   'dash.tab.history': 'History',
+  'dash.tab.telegram': 'Telegram',
 
   /* workbench shell */
   'wb.title': 'Sticker workspace',
@@ -311,6 +328,10 @@ const en: Record<MessageKey, string> = {
   'image.btn.remove': 'Remove',
   'image.btn.clear': 'Clear',
   'image.err.convert': 'Conversion failed',
+  'rule.size.static': 'Static sticker exceeds the 512 KB limit',
+  'rule.size.video': 'Video sticker exceeds the 256 KB limit',
+  'rule.side': 'One side must be 512 px and the other no more than 512 px',
+  'rule.duration': 'Video stickers cannot exceed 3 seconds',
 
   /* video workbench */
   'video.s1.title': 'Video sticker conversion',
@@ -358,9 +379,15 @@ const en: Record<MessageKey, string> = {
   'tg.selectAll': 'Select all',
   'tg.deselectAll': 'Deselect all',
   'tg.uploadResult': '{success} succeeded / {failed} failed',
+  'tg.packLink': 'Open sticker pack',
+  'tg.retryFailed': 'Retry failed',
+  'tg.failedTitle': 'Failed files',
+  'tg.emojiLabel': 'Emoji for this sticker',
   'tg.btn.upload': 'Upload to Telegram',
   'tg.btn.uploading': 'Uploading...',
   'tg.cache.cleared': 'Cache and history cleared',
+  'tg.confirmClearTitle': 'Clear the sticker cache?',
+  'tg.confirmClearBody': 'This deletes every converted sticker in this browser together with its history entry, and cannot be undone.',
 
   /* history panel */
   'history.s1.title': 'History archive',
@@ -377,6 +404,8 @@ const en: Record<MessageKey, string> = {
   'history.btn.removeSelected': 'Delete selected',
   'history.btn.download': 'Bulk download',
   'history.btn.clear': 'Clear history',
+  'history.confirmClearTitle': 'Clear all history?',
+  'history.confirmClearBody': 'This deletes every history entry together with the converted sticker files in this browser, and cannot be undone.',
   'history.group.selectAll': 'Select all',
   'history.tagInput': 'Add tag',
   'history.s2.title': 'Empty history',
@@ -407,7 +436,7 @@ const en: Record<MessageKey, string> = {
   'aria.formatFilter': 'Format filter',
   'aria.tagFilter': 'Tag filter',
 
-  /* runtime strings surfaced from utils (matched back by value via tRaw) */
+  /* runtime strings surfaced from utils as message keys (see tRuntime) */
   'sys.ffmpegLoadFailed': 'ffmpeg.wasm failed to load — refresh the page and try again',
   'sys.exportImageFailed': 'The browser could not export the sticker image',
   'sys.videoDecodeFailed': 'This video cannot be decoded here — switch to MP4/WEBM or convert it first',
@@ -426,6 +455,9 @@ const en: Record<MessageKey, string> = {
   'sys.ffmpegConvertFailed': 'ffmpeg.wasm conversion failed',
   'sys.convertingGif': 'Converting GIF',
   'sys.sourceTooLarge': 'Source video exceeds 50MB — trim it first to avoid running out of browser memory',
+  'sys.storageFull': 'Browser storage is full — clear history or the sticker cache and try again',
+  'sys.confirm': 'Confirm',
+  'sys.cancel': 'Cancel',
   'sys.outOfMemory': 'Out of browser memory; ffmpeg was reset. Use a shorter/smaller video, or trim it under 3 seconds and retry',
 
   /* telegram cache errors */

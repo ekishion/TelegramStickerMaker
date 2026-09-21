@@ -7,8 +7,12 @@
       type="button"
       :class="{ active: item.key === modelValue }"
       role="tab"
+      :id="`tab-${item.key}`"
       :aria-selected="item.key === modelValue"
+      :tabindex="item.key === modelValue ? 0 : -1"
+      :aria-controls="`panel-${item.key}`"
       @click="selectTab(item.key)"
+      @keydown="onKeydown"
     >
       {{ item.label }}
     </button>
@@ -35,8 +39,30 @@ const emit = defineEmits<{
 const tabsRef = ref<HTMLElement | null>(null)
 const indicatorRef = ref<HTMLElement | null>(null)
 
-const selectTab = (key: string) => {
+const selectTab = (key: string, focus = false) => {
   emit('update:modelValue', key)
+  if (focus) {
+    nextTick(() => {
+      tabsRef.value?.querySelector<HTMLElement>('button.active')?.focus()
+    })
+  }
+}
+
+const onKeydown = (event: KeyboardEvent) => {
+  const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End']
+  if (!keys.includes(event.key)) return
+  event.preventDefault()
+
+  const index = props.items.findIndex(item => item.key === props.modelValue)
+  const last = props.items.length - 1
+  let next = index
+  if (event.key === 'ArrowLeft') next = index <= 0 ? last : index - 1
+  if (event.key === 'ArrowRight') next = index >= last ? 0 : index + 1
+  if (event.key === 'Home') next = 0
+  if (event.key === 'End') next = last
+
+  const item = props.items[next]
+  if (item) selectTab(item.key, true)
 }
 
 const syncIndicator = async () => {

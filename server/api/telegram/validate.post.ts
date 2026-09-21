@@ -3,8 +3,8 @@ import { logger } from '../../utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {
-    const body = await readBody(event)
-    const { botToken } = body
+    const body = (await readBody(event)) ?? {}
+    const botToken = typeof body?.botToken === 'string' ? body.botToken.trim() : ''
 
     if (!botToken) {
       throw createError({ statusCode: 400, message: 'Bot token is required' })

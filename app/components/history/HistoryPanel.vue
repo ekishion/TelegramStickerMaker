@@ -42,7 +42,7 @@
       <WorkbenchSection
         v-for="(group, dateKey) in grouped"
         :key="dateKey"
-        :title="String(dateKey)"
+        :title="formatDayLabel(String(dateKey), locale)"
         :description="t('history.s1.desc', { count: group.length })"
       >
         <template #icon>
@@ -105,13 +105,16 @@ import WorkbenchEmptyState from '@/components/workbench/WorkbenchEmptyState.vue'
 import WorkbenchSection from '@/components/workbench/WorkbenchSection.vue'
 import CustomSelect from '@/components/ui/CustomSelect.vue'
 import { useLocale } from '@/composables/useLocale'
+import { useConfirm } from '@/composables/useConfirm'
 import { useLightbox } from '@/composables/useLightbox'
 import { useObjectUrlRegistry } from '@/composables/useObjectUrlRegistry'
 import { useHistoryStore } from '@/stores/history'
-import { clearCachedStickers, getCachedSticker } from '@/utils/browserStickerStore'
-import { formatFileSize, groupByDay } from '@/utils/format'
+import { clearCachedStickers, getCachedSticker, removeCachedSticker } from '@/utils/browserStickerStore'
+import { downloadZip } from '@/utils/zipDownload'
+import { formatDayLabel, formatFileSize, groupByDay } from '@/utils/format'
 
-const { t } = useLocale()
+const { t, locale } = useLocale()
+const { confirm } = useConfirm()
 const historyStore = useHistoryStore()
 const lightbox = useLightbox()
 const objectUrls = useObjectUrlRegistry()
@@ -142,11 +145,10 @@ onMounted(async () => {
 })
 
 watch(
-  () => historyStore.items,
+  () => historyStore.items.map((item: any) => item.id).join('|'),
   () => {
     void resolveCachedUrls()
-  },
-  { deep: true }
+  }
 )
 
 const resolveUrl = (url: string) => {
@@ -154,21 +156,52 @@ const resolveUrl = (url: string) => {
   return cachedUrls.value[url.slice(6)] || ''
 }
 
+const cacheIdOf = (value: unknown) => (
+  typeof value === 'string' && value.startsWith('cache:') ? value.slice(6) : null
+)
+
+let resolvingUrls = false
+
 const resolveCachedUrls = async () => {
-  objectUrls.reset()
-  cachedUrls.value = {}
+  if (resolvingUrls) return
+  resolvingUrls = true
 
-  const ids = new Set<string>()
-  historyStore.items.forEach((item: any) => {
-    const values = [item.preview, item.result?.png, item.result?.webp, item.result?.webm]
-    values.forEach(value => {
-      if (typeof value === 'string' && value.startsWith('cache:')) ids.add(value.slice(6))
+  try {
+    const wanted = new Set<string>()
+    historyStore.items.forEach((item: any) => {
+      const values = [item.preview, item.result?.png, item.result?.webp, item.result?.webm]
+      values.forEach(value => {
+        const id = cacheIdOf(value)
+        if (id) wanted.add(id)
+      })
     })
-  })
 
-  for (const id of ids) {
-    const cached = await getCachedSticker(id)
-    if (cached) cachedUrls.value[id] = objectUrls.create(cached.blob)
+    // Incremental: keep the URLs that are still referenced and only fetch the
+    // ones that are new. Editing a tag must not blank the whole gallery.
+    const current = cachedUrls.value
+    const next: Record<string, string> = {}
+    const missing: string[] = []
+
+    for (const id of wanted) {
+      if (current[id]) next[id] = current[id]
+      else missing.push(id)
+    }
+
+    for (const id of Object.keys(current)) {
+      if (!next[id]) objectUrls.revoke(current[id])
+    }
+
+    cachedUrls.value = next
+
+    for (const id of missing) {
+      const cached = await getCachedSticker(id)
+      if (cached) next[id] = objectUrls.create(cached.blob)
+    }
+    cachedUrls.value = { ...next }
+  } catch {
+    // A failing cache read must never break the panel; previews stay blank.
+  } finally {
+    resolvingUrls = false
   }
 }
 
@@ -244,51 +277,85 @@ const downloadOne = (item: any, format: string) => {
   link.click()
 }
 
-const toBatchFiles = (items: any[]) => items.flatMap(item => {
-  const files: { url: string; name: string }[] = []
-  if (item.result?.png) files.push({ url: item.result.png, name: downloadName(item.fileName, 'png') })
-  if (item.result?.webp) files.push({ url: item.result.webp, name: downloadName(item.fileName, 'webp') })
-  if (item.result?.webm) files.push({ url: item.result.webm, name: downloadName(item.fileName, 'webm') })
-  return files
-})
-
 const downloadSelected = async () => {
   const targets = historyStore.items.filter((item: any) => selectedIds.value.includes(item.id))
   if (!targets.length) return
 
-  const files = toBatchFiles(targets)
-  if (files.some(file => String(file.url).startsWith('data:') || String(file.url).startsWith('cache:'))) {
-    files.forEach(file => {
-      const link = document.createElement('a')
-      link.href = resolveUrl(file.url)
-      link.download = file.name
-      link.click()
-    })
-    return
+  const files: { url: string; name: string }[] = []
+  for (const item of targets) {
+    for (const format of ['png', 'webp', 'webm'] as const) {
+      const url = item.result?.[format]
+      if (url) files.push({ url, name: downloadName(item.fileName, format) })
+    }
+  }
+  if (!files.length) return
+
+  // Everything lives in IndexedDB now, so the zip is built in the browser:
+  // N synthetic <a download> clicks get blocked by Chrome/Firefox after the
+  // first one, which is what the old /api/download-batch path could never fix.
+  const entries: { name: string; blob: Blob }[] = []
+  const leftovers: { url: string; name: string }[] = []
+
+  for (const file of files) {
+    const id = cacheIdOf(file.url)
+    if (!id) {
+      leftovers.push(file)
+      continue
+    }
+    try {
+      const cached = await getCachedSticker(id)
+      if (cached) entries.push({ name: file.name, blob: cached.blob })
+    } catch {}
   }
 
-  const response = await fetch('/api/download-batch', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ files })
-  })
-  if (!response.ok) return
+  if (entries.length) {
+    await downloadZip(entries, `stickers-${entries.length}.zip`)
+  }
 
-  const blob = await response.blob()
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = `history-${Date.now()}.zip`
-  link.click()
-  URL.revokeObjectURL(url)
+  // Anything not backed by the cache (legacy entries) falls back to a direct
+  // browser download.
+  for (const file of leftovers) {
+    const link = document.createElement('a')
+    link.href = resolveUrl(file.url)
+    link.download = file.name
+    link.click()
+  }
 }
 
-const removeSelected = () => {
+const removeSelected = async () => {
+  const ids = new Set(selectedIds.value)
+  // Drop the cached blobs too, otherwise the Telegram panel keeps listing
+  // stickers that no longer exist in history.
+  const cacheIds = new Set<string>()
+  historyStore.items.forEach((item: any) => {
+    if (!ids.has(item.id)) return
+    const values = [item.preview, item.result?.png, item.result?.webp, item.result?.webm]
+    values.forEach(value => {
+      const id = cacheIdOf(value)
+      if (id) cacheIds.add(id)
+    })
+  })
+
   historyStore.removeMany(selectedIds.value)
   selectedIds.value = []
+
+  await Promise.all([...cacheIds].map(async id => {
+    try {
+      await removeCachedSticker(id)
+    } catch {}
+  }))
+  await resolveCachedUrls()
 }
 
 const clearHistory = async () => {
+  const ok = await confirm({
+    title: t('history.confirmClearTitle'),
+    message: t('history.confirmClearBody'),
+    confirmText: t('history.btn.clear'),
+    danger: true
+  })
+  if (!ok) return
+
   historyStore.clear()
   selectedIds.value = []
   cachedUrls.value = {}
@@ -301,12 +368,15 @@ const openPreview = (item: any) => {
     ? `${item.width}x${item.height} / ${formatFileSize(item.size || 0)}`
     : formatFileSize(item.size || 0)
 
+  const preview = resolveUrl(item.preview)
+  const downloadUrl = resolveUrl(item.result?.webp || item.result?.png || item.result?.webm || item.preview)
+
   if (item.type === 'image') {
-    lightbox.openImage(resolveUrl(item.preview), item.fileName, meta)
+    lightbox.openImage(preview, item.fileName, meta, downloadUrl)
     return
   }
 
-  lightbox.openVideo(resolveUrl(item.preview), item.fileName, meta)
+  lightbox.openVideo(preview, item.fileName, meta, downloadUrl)
 }
 </script>
 

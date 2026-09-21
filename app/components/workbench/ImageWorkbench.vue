@@ -48,8 +48,12 @@
               <span>{{ formatFileSize(task.file.size) }}</span>
             </template>
 
+            <template #extra>
+              <div v-if="task.errorKeys.length" class="tg-task-error">{{ errorText(task) }}</div>
+            </template>
+
             <template #actions>
-              <button class="tg-btn-ghost" type="button" @click="convertSingle(task)" :disabled="task.status === 'converting'">
+              <button class="tg-btn-ghost" type="button" @click="convertSingle(task)" :disabled="task.status === 'converting' || isConverting">
                 {{ t('image.btn.convert') }}
               </button>
               <button class="tg-btn-ghost" type="button" @click="downloadOne(task, 'png')" :disabled="!task.result?.png">
@@ -91,10 +95,15 @@ import { useLightbox } from '@/composables/useLightbox'
 import { useObjectUrlRegistry } from '@/composables/useObjectUrlRegistry'
 import { useHistoryStore } from '@/stores/history'
 import { formatFileSize } from '@/utils/format'
-import { saveCachedSticker } from '@/utils/browserStickerStore'
-import { convertImageToTelegramSticker, resolveReusableWebpSticker } from '@/utils/browserStickerConverter'
+import { triggerDownload } from '@/utils/download'
+import { StickerStorageFullError, saveCachedSticker } from '@/utils/browserStickerStore'
+import { LocalizedRuleError, convertImageToTelegramSticker, resolveReusableWebpSticker } from '@/utils/browserStickerConverter'
 
-const { t, tRaw } = useLocale()
+const { t, tRuntime, locale } = useLocale()
+
+/** Keys → localized text, resolved per render so language switches apply. */
+const errorText = (task: ImageTask) =>
+  task.errorKeys.map(key => tRuntime(key)).join(locale.value === 'zh' ? '；' : '; ')
 
 interface ImageTask {
   id: string
@@ -109,25 +118,45 @@ interface ImageTask {
     png?: { filename: string; size: number; url: string; cacheId: string }
     webp?: { filename: string; size: number; url: string; cacheId: string }
   } | null
-  error: string
+  /** i18n keys, translated on render so a language switch re-renders them */
+  errorKeys: string[]
 }
 
-const statusText = (status: ImageTask['status']) => ({
-  pending: t('status.pending'),
-  converting: t('status.converting'),
-  done: t('status.done'),
-  error: t('status.error')
-}[status])
-
-const tasks = ref<ImageTask[]>([])
 const limits = reactive({ maxImageFiles: 200, maxFileSize: 52428800 })
 const historyStore = useHistoryStore()
 const lightbox = useLightbox()
 const objectUrls = useObjectUrlRegistry()
 
-const pendingCount = computed(() => tasks.value.filter(t => t.status === 'pending').length)
-const doneCount = computed(() => tasks.value.filter(t => t.status === 'done').length)
-const isConverting = computed(() => tasks.value.some(t => t.status === 'converting'))
+const IMAGE_ACCEPT = ['image/png', 'image/webp', 'image/jpeg', 'image/jpg']
+
+const {
+  tasks,
+  statusText,
+  pendingCount,
+  doneCount,
+  isConverting,
+  addFiles,
+  removeTask,
+  clearAll
+} = useMediaQueue<ImageTask>({
+  accept: IMAGE_ACCEPT,
+  maxFiles: () => limits.maxImageFiles,
+  maxFileSize: () => limits.maxFileSize,
+  createTask: (file) => ({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    file,
+    name: file.name,
+    previewUrl: objectUrls.create(file),
+    width: 0,
+    height: 0,
+    status: 'pending',
+    progress: 0,
+    result: null,
+    errorKeys: []
+  }),
+  releaseUrls: task => releaseTaskUrls(task),
+  onAdded: task => loadImageMetadata(task)
+})
 
 onMounted(async () => {
   try {
@@ -147,23 +176,7 @@ const releaseTaskUrls = (task: ImageTask) => {
 }
 
 const handleFilesSelected = (files: File[]) => {
-  const valid = files.filter(file => ['image/png', 'image/webp', 'image/jpeg', 'image/jpg'].includes(file.type) && file.size <= limits.maxFileSize)
-  valid.slice(0, limits.maxImageFiles).forEach(file => {
-    const task: ImageTask = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      file,
-      name: file.name,
-      previewUrl: objectUrls.create(file),
-      width: 0,
-      height: 0,
-      status: 'pending',
-      progress: 0,
-      result: null,
-      error: ''
-    }
-    tasks.value.push(task)
-    loadImageMetadata(task)
-  })
+  addFiles(files)
 }
 
 const loadImageMetadata = (task: ImageTask) => {
@@ -180,7 +193,7 @@ const convertSingle = async (task: ImageTask) => {
 
   task.status = 'converting'
   task.progress = 10
-  task.error = ''
+  task.errorKeys = []
 
   try {
     const reusableWebp = await resolveReusableWebpSticker(task.file)
@@ -218,6 +231,8 @@ const convertSingle = async (task: ImageTask) => {
       })
       return
     }
+
+    if (reusableWebp.ruleKeys?.length) throw new LocalizedRuleError(reusableWebp.ruleKeys)
 
     const converted = await convertImageToTelegramSticker(task.file)
     task.progress = 80
@@ -270,7 +285,11 @@ const convertSingle = async (task: ImageTask) => {
     })
   } catch (error: any) {
     task.status = 'error'
-    task.error = (error.message && tRaw(error.message)) || t('image.err.convert')
+    task.errorKeys = error instanceof StickerStorageFullError
+      ? ['sys.storageFull']
+      : error instanceof LocalizedRuleError
+        ? error.ruleKeys
+        : [error.message || 'image.err.convert']
   }
 }
 
@@ -283,10 +302,7 @@ const convertAll = async () => {
 const downloadOne = (task: ImageTask, format: 'png' | 'webp') => {
   const item = task.result?.[format]
   if (!item) return
-  const link = document.createElement('a')
-  link.href = item.url
-  link.download = item.filename
-  link.click()
+  triggerDownload(item.url, item.filename)
 }
 
 const downloadAll = async (format: 'png' | 'webp') => {
@@ -295,21 +311,9 @@ const downloadAll = async (format: 'png' | 'webp') => {
   }
 }
 
-const removeTask = (id: string) => {
-  const task = tasks.value.find(item => item.id === id)
-  if (task) {
-    releaseTaskUrls(task)
-  }
-  tasks.value = tasks.value.filter(item => item.id !== id)
-}
-
-const clearAll = () => {
-  tasks.value.forEach(releaseTaskUrls)
-  tasks.value = []
-}
-
 const openPreview = (task: ImageTask) => {
   const meta = task.width ? `${task.width}x${task.height} / ${formatFileSize(task.file.size)}` : formatFileSize(task.file.size)
-  lightbox.openImage(task.previewUrl, task.name, meta)
+  const downloadUrl = task.result?.webp?.url || task.result?.png?.url
+  lightbox.openImage(task.previewUrl, task.name, meta, downloadUrl)
 }
 </script>

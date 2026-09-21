@@ -19,14 +19,14 @@
       </div>
       <div class="upload-zone-title">{{ title || t('upload.default.title') }}</div>
       <div class="upload-zone-hint">{{ hint }}</div>
-      <button class="kv-action secondary" type="button" @click.stop="openFilePicker">{{ t('upload.pick') }}</button>
+      <button class="tg-btn-primary is-accent" type="button" @click.stop="openFilePicker">{{ t('upload.pick') }}</button>
     </div>
-    <input :id="inputId" ref="fileInput" name="uploadFiles" type="file" :accept="accept" :multiple="multiple" style="display: none" @change="onFileChange" />
+    <input ref="fileInput" name="uploadFiles" type="file" :accept="accept" :multiple="multiple" style="display: none" @change="onFileChange" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, useId } from 'vue'
+import { ref } from 'vue'
 import { ImagePlus } from 'lucide-vue-next'
 
 withDefaults(defineProps<{
@@ -49,7 +49,6 @@ const { t } = useLocale()
 
 const isDragover = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
-const inputId = useId()
 
 const openFilePicker = () => {
   fileInput.value?.click()
