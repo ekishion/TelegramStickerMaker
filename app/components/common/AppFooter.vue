@@ -1,23 +1,31 @@
 <template>
-  <footer class="app-footer" aria-label="页面底部导航">
+  <footer class="app-footer" :aria-label="t('aria.footer')">
     <p class="app-footer__text">
-      项目仓库：
       <a href="https://github.com/ekishion/TelegramStickerMaker" target="_blank" rel="noreferrer">
         GitHub
+        <ArrowUpRight :size="12" :stroke-width="2" />
       </a>
-      <span class="app-footer__divider">·</span>
-      贴纸规范：
+      <span class="app-footer__divider">/</span>
       <a href="https://core.telegram.org/stickers" target="_blank" rel="noreferrer">
         Telegram Stickers
+        <ArrowUpRight :size="12" :stroke-width="2" />
       </a>
     </p>
   </footer>
 </template>
 
+<script setup lang="ts">
+import { ArrowUpRight } from 'lucide-vue-next'
+import { useLocale } from '@/composables/useLocale'
+
+const { t } = useLocale()
+</script>
+
 <style scoped>
 .app-footer {
-  margin-top: 18px;
-  padding-top: 6px;
+  margin-top: 96px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
 }
 
 .app-footer__text {
@@ -27,47 +35,39 @@
   align-items: center;
   gap: 4px;
   text-align: center;
-  font-size: 0.76rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
   line-height: 1.8;
-  color: #9ca3af;
+  color: var(--ink-3);
 }
 
 .app-footer__text a {
   display: inline-flex;
   align-items: center;
-  color: #9ca3af;
+  gap: 3px;
+  color: var(--ink-3);
   text-decoration: none;
-  transition: color 0.16s ease, opacity 0.16s ease;
-}
-
-.app-footer__text a[target="_blank"]::after {
-  content: '↗';
-  margin-left: 0.24rem;
-  font-size: 0.7em;
-  line-height: 1;
-  opacity: 0.72;
-  transform: translateY(-0.02em);
+  transition: color 0.16s ease;
 }
 
 .app-footer__text a:hover {
-  color: #6b7280;
+  color: var(--accent-ink);
 }
 
 .app-footer__divider {
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
   margin: 0 6px;
-  color: #c4c9d4;
+  color: var(--line-strong);
 }
 
 @media (max-width: 600px) {
   .app-footer {
-    margin-top: 14px;
+    margin-top: 56px;
   }
 
   .app-footer__text {
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     gap: 3px;
   }
 

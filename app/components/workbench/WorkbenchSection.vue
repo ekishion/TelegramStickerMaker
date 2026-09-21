@@ -1,7 +1,7 @@
 <template>
   <section class="workbench-section">
     <div class="workbench-section__head">
-      <div class="workbench-section__icon">
+      <div v-if="$slots.icon" class="workbench-section__icon">
         <slot name="icon" />
       </div>
       <div class="workbench-section__copy">
@@ -32,26 +32,26 @@ defineProps<{
 <style scoped>
 .workbench-section {
   display: grid;
-  gap: var(--gap-md);
-  padding: 20px;
+  gap: 18px;
+  padding: 22px;
   border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--surface);
+  border: 1px solid var(--line);
   box-shadow: var(--shadow-sm);
 }
 
 .workbench-section__head {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 13px;
 }
 
 .workbench-section__icon {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-sm);
-  background: var(--color-accent-light);
-  color: var(--color-accent);
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: var(--ink);
+  color: var(--on-ink);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -63,16 +63,18 @@ defineProps<{
 }
 
 .workbench-section__title {
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 700;
-  color: var(--color-text);
+  color: var(--ink);
   line-height: 1.3;
 }
 
 .workbench-section__desc {
-  font-size: 0.78rem;
-  color: var(--color-text-tertiary);
-  margin-top: 2px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.03em;
+  color: var(--ink-3);
+  margin-top: 3px;
 }
 
 .workbench-section__right {
@@ -83,12 +85,14 @@ defineProps<{
 }
 
 .workbench-section__badge {
-  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
   font-weight: 600;
-  color: var(--color-accent);
-  padding: 2px 8px;
-  background: var(--color-accent-light);
+  color: var(--accent-ink);
+  padding: 4px 11px;
+  background: var(--accent-soft);
   border-radius: var(--radius-full);
+  white-space: nowrap;
 }
 
 .workbench-section__body {
@@ -96,41 +100,21 @@ defineProps<{
   gap: inherit;
 }
 
-@media (min-width: 1280px) {
-  .workbench-section {
-    padding: 24px;
-    border-radius: 24px;
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(246, 249, 255, 0.92)),
-      var(--color-surface);
-    box-shadow: var(--shadow-md);
-  }
-
-  :global([data-theme="dark"] .workbench-section) {
-    background:
-      linear-gradient(180deg, rgba(17, 28, 49, 0.94), rgba(11, 20, 36, 0.96)),
-      var(--color-surface);
-  }
-
-  .workbench-section__head {
-    align-items: center;
-    gap: 16px;
-  }
-}
-
 @media (max-width: 600px) {
   .workbench-section {
-    padding: 14px;
+    padding: 16px;
     border-radius: var(--radius-md);
+    gap: 14px;
   }
 
   .workbench-section__icon {
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
   }
 
   .workbench-section__title {
-    font-size: 0.88rem;
+    font-size: 0.92rem;
   }
 }
 </style>

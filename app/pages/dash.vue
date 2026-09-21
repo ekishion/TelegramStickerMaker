@@ -5,9 +5,11 @@
         <SegmentedTabs v-model="activeTab" :items="tabs" />
       </template>
 
-      <KeepAlive>
-        <component :is="activePanel" />
-      </KeepAlive>
+      <Transition name="tab-panel" mode="out-in">
+        <KeepAlive>
+          <component :is="activePanel" />
+        </KeepAlive>
+      </Transition>
     </WorkbenchShell>
   </main>
 </template>
@@ -20,15 +22,21 @@ import ImageWorkbench from '@/components/workbench/ImageWorkbench.vue'
 import TelegramWorkbench from '@/components/workbench/TelegramWorkbench.vue'
 import VideoWorkbench from '@/components/workbench/VideoWorkbench.vue'
 import WorkbenchShell from '@/components/workbench/WorkbenchShell.vue'
+import { useLocale } from '@/composables/useLocale'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useLocale()
+
+useHead(() => ({
+  title: t('meta.dash')
+}))
 
 const tabs = computed(() => [
-  { key: 'image', label: '静态贴纸' },
-  { key: 'video', label: '视频贴纸' },
+  { key: 'image', label: t('dash.tab.image') },
+  { key: 'video', label: t('dash.tab.video') },
   { key: 'telegram', label: 'Telegram' },
-  { key: 'history', label: '历史记录' }
+  { key: 'history', label: t('dash.tab.history') }
 ])
 
 const panels = {

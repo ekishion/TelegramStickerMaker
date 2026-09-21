@@ -7,16 +7,34 @@ export default defineNuxtConfig({
   css: ['@/assets/css/main.css'],
   modules: ['@pinia/nuxt'],
   app: {
+    // Apply the saved theme before first paint to avoid a light flash for
+    // dark-mode users; layouts/default.vue keeps the reactive state in sync.
     head: {
       title: 'Telegram Sticker Maker',
+      htmlAttrs: {
+        lang: 'zh-CN'
+      },
+      script: [
+        {
+          innerHTML: `(function(){try{var t=localStorage.getItem('theme');var d=t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d){document.documentElement.setAttribute('data-theme','dark')}else if(t==='light'){document.documentElement.setAttribute('data-theme','light')}}catch(e){}})();`
+        }
+      ],
       link: [
         { rel: 'icon', type: 'image/png', href: '/icon.png' }
       ],
       meta: [
-        { name: 'theme-color', content: '#2563eb' },
-        { name: 'viewport', content: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover' }
+        { name: 'theme-color', content: '#f4f4f1', media: '(prefers-color-scheme: light)' },
+        { name: 'theme-color', content: '#0e0e10', media: '(prefers-color-scheme: dark)' },
+        { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
+        { name: 'description', content: '把图片、GIF 和视频转换为 Telegram 贴纸格式，支持批量处理、历史缓存和 Bot 上传。' },
+        { property: 'og:title', content: 'Telegram Sticker Maker' },
+        { property: 'og:description', content: '把图片、GIF 和视频转换为 Telegram 贴纸格式，支持批量处理、历史缓存和 Bot 上传。' },
+        { property: 'og:type', content: 'website' },
+        { property: 'og:image', content: '/icon.png' },
+        { name: 'twitter:card', content: 'summary' }
       ]
-    }
+    },
+    pageTransition: { name: 'page', mode: 'out-in' }
   },
   nitro: {
     preset: 'vercel'

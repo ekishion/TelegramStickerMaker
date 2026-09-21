@@ -1,41 +1,41 @@
 <template>
   <div class="tg-workbench">
     <WorkbenchSection
-      title="历史档案"
-      :description="`${filteredItems.length} 条记录`"
+      :title="t('history.s1.title')"
+      :description="t('history.s1.desc', { count: filteredItems.length })"
       class="tg-filter-shell"
     >
       <template #icon>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <Search :size="17" :stroke-width="2" />
       </template>
 
       <template #right>
-        <span v-if="selectedIds.length" class="tg-count">{{ selectedIds.length }} 已选</span>
+        <span v-if="selectedIds.length" class="tg-count">{{ t('history.selected', { count: selectedIds.length }) }}</span>
       </template>
 
       <div class="tg-filters">
-        <input v-model="searchQuery" class="tg-search" placeholder="搜索文件名或标签" />
-        <CustomSelect v-model="typeFilter" :options="typeOptions" />
-        <CustomSelect v-model="formatFilter" :options="formatOptions" />
-        <CustomSelect v-model="tagFilter" :options="tagOptions" />
+        <input v-model="searchQuery" class="tg-search" :placeholder="t('history.search')" :aria-label="t('aria.searchHistory')" />
+        <CustomSelect v-model="typeFilter" :options="typeOptions" :aria-label="t('aria.typeFilter')" />
+        <CustomSelect v-model="formatFilter" :options="formatOptions" :aria-label="t('aria.formatFilter')" />
+        <CustomSelect v-model="tagFilter" :options="tagOptions" :aria-label="t('aria.tagFilter')" />
       </div>
 
       <div class="tg-filter-actions">
-        <button class="tg-btn-ghost" type="button" @click="selectAll">全选</button>
-        <button class="tg-btn-ghost" type="button" @click="clearSelection">取消全选</button>
-        <button class="tg-btn-ghost tg-btn-danger" type="button" @click="removeSelected" :disabled="selectedIds.length === 0">删除所选</button>
+        <button class="tg-btn-ghost" type="button" @click="selectAll">{{ t('history.btn.selectAll') }}</button>
+        <button class="tg-btn-ghost" type="button" @click="clearSelection">{{ t('history.btn.deselectAll') }}</button>
+        <button class="tg-btn-ghost tg-btn-danger" type="button" @click="removeSelected" :disabled="selectedIds.length === 0">{{ t('history.btn.removeSelected') }}</button>
         <div class="tg-spacer"></div>
-        <button class="tg-btn-ghost" type="button" @click="downloadSelected" :disabled="selectedIds.length === 0">批量下载</button>
-        <button class="tg-btn-ghost tg-btn-danger" type="button" @click="clearHistory">清空历史</button>
+        <button class="tg-btn-ghost" type="button" @click="downloadSelected" :disabled="selectedIds.length === 0">{{ t('history.btn.download') }}</button>
+        <button class="tg-btn-ghost tg-btn-danger" type="button" @click="clearHistory">{{ t('history.btn.clear') }}</button>
       </div>
     </WorkbenchSection>
 
-    <WorkbenchSection v-if="filteredItems.length === 0" title="空历史" description="这里会自动保存已完成的贴纸输出">
+    <WorkbenchSection v-if="filteredItems.length === 0" :title="t('history.s2.title')" :description="t('history.s2.desc')">
       <template #icon>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="18" height="18"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        <Sticker :size="17" :stroke-width="1.8" />
       </template>
 
-      <WorkbenchEmptyState title="暂无记录" hint="完成一次贴纸导出后，会自动归档到这里" />
+      <WorkbenchEmptyState :title="t('history.empty.title')" :hint="t('history.empty.hint')" />
     </WorkbenchSection>
 
     <template v-else>
@@ -43,20 +43,20 @@
         v-for="(group, dateKey) in grouped"
         :key="dateKey"
         :title="String(dateKey)"
-        :description="`${group.length} 条记录`"
+        :description="t('history.s1.desc', { count: group.length })"
       >
         <template #icon>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <CalendarDays :size="17" :stroke-width="2" />
         </template>
 
         <template #right>
           <label class="tg-group-check">
             <input type="checkbox" :checked="isGroupSelected(group)" @change="toggleGroup(group)" />
-            <span>全选</span>
+            <span>{{ t('history.group.selectAll') }}</span>
           </label>
         </template>
 
-        <div class="tg-gallery">
+        <div class="tg-gallery tg-gallery--archive">
           <div v-for="item in group" :key="item.id" class="tg-history-item" :class="{ selected: selectedIds.includes(item.id) }">
             <div class="tg-history-preview" @click="openPreview(item)">
               <img v-if="item.type === 'image'" :src="resolveUrl(item.preview)" :alt="item.fileName" />
@@ -64,7 +64,7 @@
               <label class="tg-history-check" @click.stop>
                 <input type="checkbox" :checked="selectedIds.includes(item.id)" @change="toggleSelect(item.id)" />
               </label>
-              <span class="tg-history-type">{{ item.type === 'image' ? '静态' : '视频' }}</span>
+              <span class="tg-history-type">{{ item.type === 'image' ? t('history.badge.image') : t('history.badge.video') }}</span>
             </div>
 
             <div class="tg-history-info">
@@ -81,7 +81,7 @@
               <input
                 class="tg-tag-input"
                 :value="item.inputTag || ''"
-                placeholder="添加标签"
+                :placeholder="t('history.tagInput')"
                 @change="(e: Event) => updateTag(item.id, (e.target as HTMLInputElement).value)"
               />
             </div>
@@ -100,15 +100,18 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { CalendarDays, Search, Sticker } from 'lucide-vue-next'
 import WorkbenchEmptyState from '@/components/workbench/WorkbenchEmptyState.vue'
 import WorkbenchSection from '@/components/workbench/WorkbenchSection.vue'
 import CustomSelect from '@/components/ui/CustomSelect.vue'
+import { useLocale } from '@/composables/useLocale'
 import { useLightbox } from '@/composables/useLightbox'
 import { useObjectUrlRegistry } from '@/composables/useObjectUrlRegistry'
 import { useHistoryStore } from '@/stores/history'
 import { clearCachedStickers, getCachedSticker } from '@/utils/browserStickerStore'
 import { formatFileSize, groupByDay } from '@/utils/format'
 
+const { t } = useLocale()
 const historyStore = useHistoryStore()
 const lightbox = useLightbox()
 const objectUrls = useObjectUrlRegistry()
@@ -120,18 +123,18 @@ const tagFilter = ref('all')
 const selectedIds = ref<string[]>([])
 const cachedUrls = ref<Record<string, string>>({})
 
-const typeOptions = [
-  { value: 'all', label: '全部类型' },
-  { value: 'image', label: '静态贴纸' },
-  { value: 'video', label: '视频贴纸' }
-]
+const typeOptions = computed(() => [
+  { value: 'all', label: t('history.type.all') },
+  { value: 'image', label: t('history.type.image') },
+  { value: 'video', label: t('history.type.video') }
+])
 
-const formatOptions = [
-  { value: 'all', label: '全部格式' },
+const formatOptions = computed(() => [
+  { value: 'all', label: t('history.format.all') },
   { value: 'png', label: 'PNG' },
   { value: 'webp', label: 'WEBP' },
   { value: 'webm', label: 'WEBM' }
-]
+])
 
 onMounted(async () => {
   historyStore.load()
@@ -178,7 +181,7 @@ const availableTags = computed(() => {
 })
 
 const tagOptions = computed(() => [
-  { value: 'all', label: '全部标签' },
+  { value: 'all', label: t('history.tag.all') },
   ...availableTags.value.map(tag => ({ value: tag, label: tag }))
 ])
 
@@ -308,305 +311,11 @@ const openPreview = (item: any) => {
 </script>
 
 <style scoped>
-.tg-workbench {
-  display: grid;
-  gap: var(--gap-lg);
-}
-
-.tg-count {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--color-accent);
-  padding: 2px 8px;
-  background: var(--color-accent-light);
-  border-radius: var(--radius-full);
-}
-
-.tg-filters {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.tg-search {
-  flex: 1;
-  min-width: 160px;
-  padding: 8px 12px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border);
-  background: var(--color-surface-solid);
-  color: var(--color-text);
-  font-size: 0.8rem;
-  font-family: var(--font-sans);
-  outline: none;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.tg-search:focus {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px var(--color-accent-light);
-}
-
-.tg-search::placeholder {
-  color: var(--color-text-tertiary);
-}
-
-.tg-filter-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  padding-top: 8px;
-  border-top: 1px solid var(--color-border);
-}
-
-.tg-spacer {
-  flex: 1;
-}
-
-.tg-group-check {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.72rem;
-  color: var(--color-text-tertiary);
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.tg-group-check input {
-  accent-color: var(--color-accent);
-}
-
-.tg-gallery {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 10px;
-}
-
-.tg-history-item {
-  padding: 10px;
-  border-radius: var(--radius-md);
-  background: var(--color-surface-solid);
-  border: 1px solid var(--color-border);
-  display: grid;
-  gap: 6px;
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
-}
-
-.tg-history-item:hover {
-  border-color: var(--color-border-strong);
-  transform: translateY(-1px);
-}
-
-.tg-history-item.selected {
-  background: var(--color-accent-light);
-  border-color: var(--color-accent);
-}
-
-.tg-history-preview {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 16 / 10;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  background: var(--color-bg-subtle);
-  border: 1px solid var(--color-border);
-  cursor: pointer;
-}
-
-.tg-history-preview img,
-.tg-history-preview video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.tg-history-check {
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.4);
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.tg-history-check input {
-  accent-color: #fff;
-  width: 14px;
-  height: 14px;
-}
-
-.tg-history-type {
-  position: absolute;
-  bottom: 6px;
-  right: 6px;
-  font-size: 0.6rem;
-  font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 4px;
-  color: #fff;
-  background: rgba(0, 0, 0, 0.5);
-}
-
-.tg-history-info {
-  padding: 0 2px;
-  display: grid;
-  gap: 4px;
-}
-
-.tg-history-name {
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--color-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.tg-history-meta {
-  display: flex;
-  gap: 6px;
-  font-size: 0.65rem;
-  color: var(--color-text-tertiary);
-}
-
-.tg-history-tags {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-
-.tg-tag {
-  font-size: 0.6rem;
-  font-weight: 600;
-  padding: 1px 5px;
-  border-radius: 3px;
-  background: var(--color-accent-light);
-  color: var(--color-accent);
-}
-
-.tg-tag-input {
-  width: 100%;
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border);
-  background: var(--color-surface-solid);
-  color: var(--color-text);
-  font-size: 0.68rem;
-  font-family: var(--font-sans);
-  outline: none;
-  transition: border-color 0.15s ease;
-}
-
-.tg-tag-input:focus {
-  border-color: var(--color-accent);
-}
-
-.tg-tag-input::placeholder {
-  color: var(--color-text-tertiary);
-}
-
-.tg-history-actions {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-
-.tg-btn-ghost {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--color-text-secondary);
-  font-size: 0.7rem;
-  font-weight: 500;
-  font-family: var(--font-sans);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.tg-btn-ghost:hover:not(:disabled) {
-  background: var(--color-surface-hover);
-  color: var(--color-accent-strong);
-  border-color: var(--color-border);
-}
-
-.tg-btn-ghost:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.tg-btn-danger:hover:not(:disabled) {
-  color: var(--color-error);
-  background: var(--color-error-light);
-}
-
 @media (min-width: 1280px) {
-  .tg-workbench {
-    gap: 20px;
-  }
-
   .tg-filter-shell {
     position: sticky;
-    top: 108px;
+    top: 88px;
     z-index: 5;
-  }
-
-  .tg-filters {
-    display: grid;
-    grid-template-columns: minmax(260px, 1.2fr) repeat(3, minmax(150px, 0.55fr));
-    gap: 10px;
-  }
-
-  .tg-gallery {
-    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-    gap: 14px;
-  }
-
-  .tg-history-item {
-    padding: 12px;
-    gap: 8px;
-  }
-
-  .tg-history-preview {
-    aspect-ratio: 16 / 11;
-  }
-}
-
-@media (max-width: 600px) {
-  .tg-filters {
-    gap: 6px;
-  }
-
-  .tg-search {
-    min-width: 100%;
-  }
-
-  .tg-gallery {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 8px;
-  }
-
-  .tg-history-actions {
-    gap: 3px;
-  }
-
-  .tg-btn-ghost {
-    padding: 3px 6px;
-    font-size: 0.65rem;
-  }
-
-  .tg-filter-actions {
-    gap: 4px;
   }
 }
 </style>

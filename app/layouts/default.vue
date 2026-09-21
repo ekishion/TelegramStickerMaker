@@ -1,53 +1,44 @@
 <template>
   <div class="page-shell">
-    <div class="kv-container">
-      <header class="nav-bar">
+    <!-- Full-bleed rail: the sticky bar spans the viewport while the inner
+         rail stays on the page grid, so brand/actions align with content. -->
+    <header class="nav-bar" :class="{ 'is-scrolled': isScrolled }">
+      <div class="nav-bar-inner">
         <div class="nav-brand">
           <NuxtLink to="/" class="nav-brand-link">
-            <img class="nav-mark" src="/icon.png" alt="Logo" />
-            <div>
+            <img class="nav-mark" src="/icon.png" alt="Telegram Sticker Maker" />
+            <div class="nav-brand-text">
               <div class="nav-title">Telegram Sticker Maker</div>
-              <div class="nav-subtitle">贴纸制作与上传工具</div>
+              <div class="nav-subtitle">Sticker Atelier</div>
             </div>
           </NuxtLink>
         </div>
 
         <div class="nav-right">
-          <NuxtLink v-if="isDash" to="/" class="nav-back">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-            首页
+          <NuxtLink v-if="isDash" to="/" class="nav-link">
+            <ArrowLeft :size="15" :stroke-width="2" />
+            <span>{{ t('nav.home') }}</span>
           </NuxtLink>
 
-          <NuxtLink v-else to="/dash" class="nav-enter">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-            工作台
+          <NuxtLink v-else to="/dash" class="nav-link">
+            <span>{{ t('nav.workbench') }}</span>
+            <ArrowUpRight :size="15" :stroke-width="2" />
           </NuxtLink>
+
+          <button class="locale-toggle" type="button" @click="toggleLocale" :aria-label="t('nav.localeAria')">
+            {{ locale === 'zh' ? 'EN' : '中' }}
+          </button>
 
           <button class="theme-toggle" type="button" @click="cycleTheme" :aria-label="themeLabel">
-            <svg v-if="theme === 'system'" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-              <line x1="8" y1="21" x2="16" y2="21" />
-              <line x1="12" y1="17" x2="12" y2="21" />
-            </svg>
-            <svg v-else-if="theme === 'light'" class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="5" />
-              <line x1="12" y1="1" x2="12" y2="3" />
-              <line x1="12" y1="21" x2="12" y2="23" />
-              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-              <line x1="1" y1="12" x2="3" y2="12" />
-              <line x1="21" y1="12" x2="23" y2="12" />
-              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-            </svg>
-            <svg v-else class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-            </svg>
-            <span class="theme-label">{{ themeLabel }}</span>
+            <Monitor v-if="theme === 'system'" :size="15" :stroke-width="2" />
+            <SunMedium v-else-if="theme === 'light'" :size="15" :stroke-width="2" />
+            <Moon v-else :size="15" :stroke-width="2" />
           </button>
         </div>
-      </header>
+      </div>
+    </header>
 
+    <div class="kv-container">
       <slot />
       <AppFooter />
     </div>
@@ -57,14 +48,22 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { ArrowLeft, ArrowUpRight, Monitor, Moon, SunMedium } from 'lucide-vue-next'
 import AppFooter from '@/components/common/AppFooter.vue'
 import Lightbox from '@/components/ui/Lightbox.vue'
+import { initLocaleFromStorage, useLocale } from '@/composables/useLocale'
 import { useLightbox } from '@/composables/useLightbox'
 
 const route = useRoute()
 const lightboxRef = ref()
 const { setRef } = useLightbox()
+const { locale, t, toggleLocale } = useLocale()
+
+// Keep <html lang> in sync with the active language (SSR default is zh-CN)
+useHead(() => ({
+  htmlAttrs: { lang: locale.value === 'zh' ? 'zh-CN' : 'en' }
+}))
 
 onMounted(() => {
   setRef(lightboxRef.value)
@@ -72,16 +71,30 @@ onMounted(() => {
 
 const isDash = computed(() => route.path === '/dash')
 
+// Elevate the glass rail once the page scrolls, so it separates from content
+const isScrolled = ref(false)
+
+const onScroll = () => {
+  isScrolled.value = window.scrollY > 8
+}
+
+onMounted(() => {
+  isScrolled.value = window.scrollY > 8
+  window.addEventListener('scroll', onScroll, { passive: true })
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', onScroll)
+})
+
 type ThemeMode = 'system' | 'light' | 'dark'
 
 const theme = ref<ThemeMode>('system')
 const isDark = ref(false)
 
-const themeLabel = computed(() => ({
-  system: '跟随系统',
-  light: '浅色',
-  dark: '深色'
-}[theme.value]))
+const themeLabel = computed(() => t(
+  theme.value === 'system' ? 'theme.system' : theme.value === 'light' ? 'theme.light' : 'theme.dark'
+))
 
 const applyTheme = (mode: ThemeMode) => {
   if (mode === 'system') {
@@ -105,6 +118,9 @@ onMounted(() => {
   theme.value = saved && ['system', 'light', 'dark'].includes(saved) ? saved : 'system'
   applyTheme(theme.value)
 
+  // Restore the saved language after hydration (server renders zh)
+  initLocaleFromStorage()
+
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
     if (theme.value === 'system') applyTheme('system')
   })
@@ -116,91 +132,115 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .nav-brand-link {
   display: flex;
   align-items: center;
-  gap: var(--gap-sm);
+  gap: 10px;
   text-decoration: none;
   color: inherit;
   min-width: 0;
 }
 
-.nav-back,
-.nav-enter {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 8px 13px;
-  border-radius: var(--radius-full);
-  border: 1px solid rgba(24, 62, 55, 0.12);
-  background: rgba(255, 255, 255, 0.38);
-  color: var(--color-text-secondary);
-  font-size: 0.78rem;
-  font-weight: 800;
-  font-family: var(--font-sans);
-  text-decoration: none;
-  transition: all 0.15s ease;
-  white-space: nowrap;
+.nav-brand-text {
+  min-width: 0;
 }
 
-.nav-back:hover,
-.nav-enter:hover {
-  border-color: var(--color-accent);
-  color: var(--color-accent-strong);
-  background: var(--color-accent-light);
+.nav-brand-link:hover .nav-mark {
+  border-color: var(--ink);
+  transform: rotate(-4deg);
 }
 
-.theme-toggle {
-  display: flex;
+.nav-brand-link:hover .nav-title {
+  color: var(--accent-ink);
+}
+
+.nav-link {
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 9px 14px;
+  padding: 8px 16px;
   border-radius: var(--radius-full);
-  border: 1px solid var(--color-border);
-  background: rgba(255, 255, 255, 0.34);
-  color: var(--color-text-secondary);
-  font-size: 0.8rem;
-  font-weight: 800;
-  font-family: var(--font-sans);
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform 0.16s var(--ease-out), border-color 0.16s ease, background 0.16s ease,
+    color 0.16s ease, box-shadow 0.16s var(--ease-out);
   white-space: nowrap;
+}
+
+.nav-link:hover {
+  transform: translateY(-1px);
+  border-color: var(--ink);
+  box-shadow: var(--shadow-sm);
+}
+
+.nav-link:active {
+  transform: scale(0.97);
+}
+
+/* Matched to .nav-link so the right-hand controls read as one cluster */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+  transition: border-color 0.16s ease, color 0.16s ease, transform 0.16s var(--ease-out);
 }
 
 .theme-toggle:hover {
-  background: var(--color-surface);
-  color: var(--color-text);
+  border-color: var(--ink);
+  transform: rotate(12deg);
 }
 
-.theme-icon {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
+.theme-toggle:active {
+  transform: scale(0.94);
 }
 
-.theme-label {
-  line-height: 1;
+/* Language switch: shows the target language (EN on the zh site, 中 on the en site) */
+.locale-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 9px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  transition: border-color 0.16s ease, transform 0.16s var(--ease-out);
+}
+
+.locale-toggle:hover {
+  border-color: var(--ink);
+}
+
+.locale-toggle:active {
+  transform: scale(0.94);
 }
 
 @media (max-width: 480px) {
-  .theme-label {
+  .nav-link span {
     display: none;
   }
 
-  .theme-toggle {
-    padding: 8px;
-  }
-
-  .nav-back span,
-  .nav-enter span {
-    display: none;
-  }
-
-  .nav-back,
-  .nav-enter {
-    padding: 6px 8px;
+  .nav-link {
+    padding: 8px 11px;
   }
 }
 </style>

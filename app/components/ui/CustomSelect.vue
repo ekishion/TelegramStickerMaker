@@ -7,9 +7,7 @@
       @click="toggle"
     >
       <span class="custom-select-label">{{ selectedLabel }}</span>
-      <svg class="custom-select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="6 9 12 15 18 9" />
-      </svg>
+      <ChevronDown class="custom-select-chevron" :size="15" :stroke-width="2" />
     </button>
     <Transition name="dropdown">
       <div v-if="isOpen" class="custom-select-dropdown">
@@ -22,9 +20,7 @@
           @click="select(option.value)"
         >
           <span>{{ option.label }}</span>
-          <svg v-if="option.value === modelValue" class="custom-select-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
+          <Check v-if="option.value === modelValue" :size="14" :stroke-width="2.4" />
         </button>
       </div>
     </Transition>
@@ -33,6 +29,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { Check, ChevronDown } from 'lucide-vue-next'
 
 interface Option {
   value: string
@@ -81,30 +78,27 @@ onBeforeUnmount(() => { document.removeEventListener('mousedown', onClickOutside
 .custom-select-trigger {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   width: 100%;
   border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  padding: 0 12px;
-  background: var(--color-surface-solid);
-  color: var(--color-text);
-  font-size: 0.85rem;
-  font-family: var(--font-sans);
+  border: 1px solid var(--line);
+  padding: 0 13px;
+  background: var(--paper-2);
+  color: var(--ink);
+  font-size: 0.82rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease, background 0.2s ease;
   min-height: 40px;
-  box-shadow: none;
   text-align: left;
 }
 
 .custom-select-trigger:hover {
-  border-color: var(--color-border-strong);
-  background: var(--color-surface-hover);
+  border-color: var(--line-strong);
 }
 
 .custom-select-trigger.open {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px var(--color-accent-light);
+  border-color: var(--ink);
+  background: var(--surface);
 }
 
 .custom-select-label {
@@ -116,11 +110,9 @@ onBeforeUnmount(() => { document.removeEventListener('mousedown', onClickOutside
 }
 
 .custom-select-chevron {
-  width: 16px;
-  height: 16px;
   flex-shrink: 0;
-  color: var(--color-text-tertiary);
-  transition: transform 0.2s ease;
+  color: var(--ink-3);
+  transition: transform 0.25s var(--ease-spring);
 }
 
 .custom-select-trigger.open .custom-select-chevron {
@@ -129,19 +121,19 @@ onBeforeUnmount(() => { document.removeEventListener('mousedown', onClickOutside
 
 .custom-select-dropdown {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + 6px);
   left: 0;
   right: 0;
-  z-index: 50;
+  z-index: var(--z-pop);
   border-radius: var(--radius-md);
-  background: var(--color-surface-solid);
-  border: 1px solid var(--color-border-strong);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
   box-shadow: var(--shadow-lg);
-  padding: 4px;
-  max-height: 220px;
+  padding: 5px;
+  max-height: 240px;
   overflow-y: auto;
-  scrollbar-width: thin;
   width: max-content;
+  min-width: 100%;
 }
 
 .custom-select-option {
@@ -152,44 +144,34 @@ onBeforeUnmount(() => { document.removeEventListener('mousedown', onClickOutside
   width: 100%;
   border: none;
   background: transparent;
-  padding: 8px 10px;
+  padding: 9px 11px;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 0.82rem;
-  font-family: var(--font-sans);
-  color: var(--color-text);
+  font-size: 0.8rem;
+  color: var(--ink);
   transition: background 0.12s ease;
   text-align: left;
 }
 
 .custom-select-option:hover {
-  background: var(--color-accent-light);
-  color: var(--color-accent-strong);
+  background: var(--paper-2);
 }
 
 .custom-select-option.selected {
-  background: var(--color-accent-light);
-  color: var(--color-accent-strong);
-  font-weight: 600;
-}
-
-.custom-select-check {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-  color: var(--color-accent);
+  color: var(--accent-ink);
+  font-weight: 700;
 }
 
 /* Transition */
 .dropdown-enter-active,
 .dropdown-leave-active {
-  transition: opacity 0.15s ease, transform 0.15s ease;
+  transition: opacity 0.16s ease, transform 0.16s var(--ease-out);
 }
 
 .dropdown-enter-from,
 .dropdown-leave-to {
   opacity: 0;
-  transform: translateY(-4px);
+  transform: translateY(-5px);
 }
 
 @media (max-width: 600px) {

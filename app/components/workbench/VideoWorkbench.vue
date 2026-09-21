@@ -1,19 +1,17 @@
 <template>
   <div class="tg-workbench">
     <WorkbenchSection
-      title="视频贴纸转换"
-      description="GIF / MP4 / WEBM 转 Telegram WEBM VP9 视频贴纸"
-      badge="最长 3 秒 / 256KB"
+      :title="t('video.s1.title')"
+      :description="t('video.s1.desc')"
+      :badge="t('video.s1.badge')"
     >
       <template #icon>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-          <polygon points="5 3 19 12 5 21 5 3" />
-        </svg>
+        <Clapperboard :size="17" :stroke-width="2" />
       </template>
 
       <UploadZone
-        title="上传动图或视频"
-        hint="支持 GIF / MP4 / WEBM，浏览器本地转换，不上传源文件"
+        :title="t('video.upload.title')"
+        :hint="t('video.upload.hint')"
         accept="image/gif,video/mp4,video/webm"
         @files-selected="handleFilesSelected"
       />
@@ -21,19 +19,12 @@
 
     <WorkbenchSection
       v-if="tasks.length"
-      title="转换队列"
-      :description="`${doneCount}/${tasks.length} 已完成`"
-      :badge="`${pendingCount} 待处理`"
+      :title="t('image.s2.title')"
+      :description="t('image.s2.done', { done: doneCount, total: tasks.length })"
+      :badge="t('image.s2.pending', { pending: pendingCount })"
     >
       <template #icon>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-          <line x1="8" y1="6" x2="21" y2="6" />
-          <line x1="8" y1="12" x2="21" y2="12" />
-          <line x1="8" y1="18" x2="21" y2="18" />
-          <line x1="3" y1="6" x2="3.01" y2="6" />
-          <line x1="3" y1="12" x2="3.01" y2="12" />
-          <line x1="3" y1="18" x2="3.01" y2="18" />
-        </svg>
+        <ListChecks :size="17" :stroke-width="2" />
       </template>
 
       <div v-if="converting" class="tg-batch-progress">
@@ -72,11 +63,11 @@
             </template>
 
             <template #actions>
-              <button class="tg-btn-ghost tg-btn-primary-soft" type="button" @click="convertSingle(task)" :disabled="task.status === 'converting' || converting">
-                转换
+              <button class="tg-btn-ghost" type="button" @click="convertSingle(task)" :disabled="task.status === 'converting' || converting">
+                {{ t('video.btn.convert') }}
               </button>
-              <button class="tg-btn-ghost" type="button" @click="downloadOne(task)" :disabled="!task.result">下载</button>
-              <button class="tg-btn-ghost tg-btn-danger tg-btn-span-2" type="button" @click="removeTask(task.id)">移除</button>
+              <button class="tg-btn-ghost" type="button" @click="downloadOne(task)" :disabled="!task.result">{{ t('video.btn.download') }}</button>
+              <button class="tg-btn-ghost tg-btn-danger tg-btn-span-2" type="button" @click="removeTask(task.id)">{{ t('video.btn.remove') }}</button>
             </template>
           </MediaTaskCard>
         </div>
@@ -84,11 +75,11 @@
 
       <div class="tg-upload-bar">
         <button class="tg-btn-outline" type="button" @click="convertAll" :disabled="pendingCount === 0 || converting">
-          全部转换
+          {{ t('video.btn.convertAll') }}
         </button>
         <div class="tg-upload-bar-info">
-          <button class="tg-btn-ghost" type="button" @click="downloadAll" :disabled="doneCount === 0">全部下载</button>
-          <button class="tg-btn-ghost tg-btn-danger" type="button" @click="clearAll">清空</button>
+          <button class="tg-btn-ghost" type="button" @click="downloadAll" :disabled="doneCount === 0">{{ t('video.btn.downloadAll') }}</button>
+          <button class="tg-btn-ghost tg-btn-danger" type="button" @click="clearAll">{{ t('video.btn.clear') }}</button>
         </div>
       </div>
     </WorkbenchSection>
@@ -97,6 +88,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { Clapperboard, ListChecks } from 'lucide-vue-next'
 import MediaTaskCard from '@/components/workbench/MediaTaskCard.vue'
 import WorkbenchSection from '@/components/workbench/WorkbenchSection.vue'
 import UploadZone from '@/components/ui/UploadZone.vue'
@@ -107,6 +99,9 @@ import { formatFileSize } from '@/utils/format'
 import { saveCachedSticker } from '@/utils/browserStickerStore'
 import { convertVideoToTelegramSticker, resolveReusableWebmSticker } from '@/utils/browserStickerConverter'
 import { TELEGRAM_STICKER_LIMITS } from '@/utils/telegramStickerRules'
+import { useLocale } from '@/composables/useLocale'
+
+const { t, tRaw } = useLocale()
 
 interface VideoTaskResult {
   filename: string
@@ -131,10 +126,10 @@ interface VideoTask {
 }
 
 const statusText = (status: VideoTask['status']) => ({
-  pending: '待转换',
-  converting: '转换中',
-  done: '已完成',
-  error: '失败'
+  pending: t('status.pending'),
+  converting: t('status.converting'),
+  done: t('status.done'),
+  error: t('status.error')
 }[status])
 
 const tasks = ref<VideoTask[]>([])
@@ -183,7 +178,7 @@ const handleFilesSelected = (files: File[]) => {
       progress: 0,
       message: '',
       result: null,
-      error: file.size > TELEGRAM_STICKER_LIMITS.maxSourceVideoBytes ? '源文件超过 50MB，请先裁剪后再转换' : ''
+      error: file.size > TELEGRAM_STICKER_LIMITS.maxSourceVideoBytes ? t('video.err.tooLarge') : ''
     })
   })
 }
@@ -193,7 +188,7 @@ const convertSingle = async (task: VideoTask) => {
 
   task.status = 'converting'
   task.progress = 5
-  task.message = '准备转换'
+  task.message = t('video.msg.prepare')
   task.error = ''
 
   try {
@@ -213,7 +208,7 @@ const convertSingle = async (task: VideoTask) => {
 
       task.status = 'done'
       task.progress = 100
-      task.message = '已识别为合规 WEBM，直接收录'
+      task.message = t('video.msg.reused')
       task.result = {
         filename: reusableWebm.result.fileName,
         url: objectUrls.track(reusableWebm.result.url),
@@ -237,7 +232,7 @@ const convertSingle = async (task: VideoTask) => {
 
     const converted = await convertVideoToTelegramSticker(task.file, (progress, message) => {
       task.progress = progress
-      task.message = message
+      task.message = tRaw(message)
     })
 
     const cache = await saveCachedSticker({
@@ -253,7 +248,7 @@ const convertSingle = async (task: VideoTask) => {
 
     task.status = 'done'
     task.progress = 100
-    task.message = '转换完成'
+    task.message = t('video.msg.done')
     task.result = {
       filename: converted.fileName,
       url: objectUrls.track(converted.url),
@@ -274,7 +269,7 @@ const convertSingle = async (task: VideoTask) => {
     })
   } catch (error: any) {
     task.status = 'error'
-    task.error = error.message || '转换失败'
+    task.error = (error.message && tRaw(error.message)) || t('video.err.convert')
   }
 }
 
@@ -288,7 +283,7 @@ const convertAll = async () => {
 
   for (const task of pending) {
     currentTaskIndex.value += 1
-    convertStatus.value = `正在转换 ${currentTaskIndex.value}/${totalTasks.value}: ${task.name}`
+    convertStatus.value = t('video.msg.converting', { index: currentTaskIndex.value, total: totalTasks.value, name: task.name })
     await convertSingle(task)
   }
 
@@ -327,197 +322,7 @@ const openPreview = (task: VideoTask) => {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap');
-
-.tg-workbench {
-  display: grid;
-  gap: var(--gap-lg);
-}
-
-.tg-batch-progress {
-  display: grid;
-  gap: 6px;
-  padding: 10px 12px;
-  border-radius: var(--radius-md);
-  background: var(--color-bg-subtle);
-}
-
-.tg-batch-bar {
-  width: 100%;
-  height: 4px;
-  background: var(--color-border);
-  border-radius: var(--radius-full);
-  overflow: hidden;
-}
-
-.tg-batch-fill {
-  height: 100%;
-  background: var(--color-accent);
-  transition: width 0.3s ease;
-  border-radius: var(--radius-full);
-}
-
-.tg-batch-info {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  font-size: 0.7rem;
-  color: var(--color-text-tertiary);
-}
-
-.tg-gallery-frame {
-  position: relative;
-  padding: 8px;
-  border-radius: 22px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.64), rgba(245, 248, 255, 0.84)),
-    var(--color-bg-subtle);
-  border: 1px solid rgba(37, 99, 235, 0.12);
-}
-
-:global([data-theme="dark"] .tg-gallery-frame) {
-  background:
-    linear-gradient(180deg, rgba(17, 28, 49, 0.76), rgba(10, 18, 31, 0.92)),
-    var(--color-bg-subtle);
-  border-color: rgba(147, 197, 253, 0.14);
-}
-
-.tg-gallery {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(186px, 1fr));
-  gap: 12px;
-}
-
-.tg-task-message,
-.tg-task-error {
-  font-size: 0.62rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.tg-task-message {
-  color: var(--color-accent);
-}
-
-.tg-task-error {
-  color: var(--color-error);
-}
-
-.tg-btn-ghost,
-.tg-btn-outline {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  border-radius: 999px;
-  font-family: "Manrope", "Noto Sans SC", sans-serif;
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
-}
-
-.tg-btn-ghost {
-  padding: 5px 10px;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface-solid);
-  color: var(--color-text);
-  font-size: 0.68rem;
-  font-weight: 600;
-}
-
-.tg-btn-outline {
-  padding: 8px 16px;
-  border: 1px solid var(--color-border);
-  background: transparent;
-  color: var(--color-text-secondary);
-  font-size: 0.8rem;
-  font-weight: 600;
-  min-height: 38px;
-}
-
-.tg-btn-primary-soft {
-  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-strong));
-  border-color: transparent;
-  color: #ffffff;
-  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.18);
-}
-
 .tg-btn-span-2 {
   grid-column: span 2;
-}
-
-.tg-btn-ghost:hover:not(:disabled),
-.tg-btn-outline:hover:not(:disabled) {
-  transform: translateY(-1px);
-}
-
-.tg-btn-ghost:hover:not(:disabled) {
-  box-shadow: var(--shadow-sm);
-  border-color: var(--color-border-strong);
-  color: var(--color-accent-strong);
-}
-
-.tg-btn-primary-soft:hover:not(:disabled) {
-  color: #ffffff;
-  border-color: transparent;
-  box-shadow: 0 14px 24px rgba(37, 99, 235, 0.24);
-}
-
-.tg-btn-outline:hover:not(:disabled) {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-  background: var(--color-accent-light);
-}
-
-.tg-btn-danger {
-  color: #b7271d;
-  border-color: rgba(231, 76, 60, 0.35);
-  background: rgba(231, 76, 60, 0.1);
-}
-
-.tg-btn-danger:hover:not(:disabled) {
-  color: #fff;
-  background: rgba(231, 76, 60, 0.9);
-  border-color: rgba(231, 76, 60, 0.9);
-}
-
-.tg-btn-ghost:disabled,
-.tg-btn-outline:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-.tg-upload-bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--color-border);
-}
-
-.tg-upload-bar-info {
-  flex: 1;
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-@media (max-width: 600px) {
-  .tg-gallery-frame {
-    padding: 6px;
-    border-radius: 16px;
-  }
-
-  .tg-gallery {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 8px;
-  }
-
-  .tg-btn-ghost {
-    padding: 3px 6px;
-    font-size: 0.65rem;
-  }
 }
 </style>

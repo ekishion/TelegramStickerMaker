@@ -9,18 +9,11 @@
               <span v-if="item?.meta" class="lightbox-meta">{{ item.meta }}</span>
             </div>
             <div class="lightbox-actions">
-              <a v-if="item?.downloadUrl" :href="item.downloadUrl" :download="item.downloadName || item?.name" class="lightbox-btn" title="下载">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                  <polyline points="7 10 12 15 17 10"/>
-                  <line x1="12" y1="15" x2="12" y2="3"/>
-                </svg>
+              <a v-if="item?.downloadUrl" :href="item.downloadUrl" :download="item.downloadName || item?.name" class="lightbox-btn" :title="t('lightbox.download')">
+                <Download :size="17" :stroke-width="2" />
               </a>
-              <button class="lightbox-btn" type="button" @click="close" title="关闭">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-                  <line x1="18" y1="6" x2="6" y2="18"/>
-                  <line x1="6" y1="6" x2="18" y2="18"/>
-                </svg>
+              <button class="lightbox-btn" type="button" @click="close" :title="t('lightbox.close')">
+                <X :size="17" :stroke-width="2" />
               </button>
             </div>
           </div>
@@ -35,6 +28,11 @@
 </template>
 
 <script setup lang="ts">
+import { Download, X } from 'lucide-vue-next'
+import { useLocale } from '@/composables/useLocale'
+
+const { t } = useLocale()
+
 export interface LightboxItem {
   type: 'image' | 'video'
   src: string
@@ -72,13 +70,13 @@ defineExpose({ open, close })
 .lightbox-overlay {
   position: fixed;
   inset: 0;
-  z-index: 9999;
+  z-index: var(--z-modal);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(10, 10, 12, 0.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   padding: 24px;
 }
 
@@ -96,27 +94,31 @@ defineExpose({ open, close })
   align-items: center;
   justify-content: space-between;
   gap: var(--gap-md);
-  padding: 12px 0;
+  padding: 0 0 12px;
 }
 
 .lightbox-info {
   display: flex;
   align-items: center;
   gap: var(--gap-sm);
-  color: #fff;
+  color: #f4f4f1;
   font-size: 0.9rem;
   min-width: 0;
 }
 
 .lightbox-info strong {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 0.82rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .lightbox-meta {
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 0.8rem;
+  color: rgba(244, 244, 241, 0.5);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
   white-space: nowrap;
 }
 
@@ -133,19 +135,17 @@ defineExpose({ open, close })
   width: 40px;
   height: 40px;
   border-radius: var(--radius-full);
-  border: none;
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  color: #fff;
+  border: 1px solid rgba(244, 244, 241, 0.24);
+  background: rgba(244, 244, 241, 0.08);
+  color: #f4f4f1;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: background 0.2s ease, transform 0.2s var(--ease-spring);
   text-decoration: none;
 }
 
 .lightbox-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
-  transform: scale(1.05);
+  background: rgba(244, 244, 241, 0.2);
+  transform: scale(1.06);
 }
 
 .lightbox-body {
@@ -159,13 +159,13 @@ defineExpose({ open, close })
   max-width: 100%;
   max-height: calc(90vh - 80px);
   object-fit: contain;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
 }
 
 /* Transitions */
 .lightbox-enter-active,
 .lightbox-leave-active {
-  transition: opacity 0.2s ease;
+  transition: opacity 0.22s ease;
 }
 
 .lightbox-enter-from,
@@ -175,22 +175,20 @@ defineExpose({ open, close })
 
 @media (max-width: 480px) {
   .lightbox-overlay {
-    padding: 8px;
     padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
   }
   .lightbox-info strong {
-    font-size: 0.8rem;
+    font-size: 0.76rem;
   }
   .lightbox-meta {
     display: none;
   }
   .lightbox-btn {
-    width: 44px;
-    height: 44px;
+    width: 42px;
+    height: 42px;
   }
   .lightbox-media {
     max-height: calc(100dvh - 60px);
-    border-radius: var(--radius-md);
   }
 }
 </style>

@@ -1,21 +1,17 @@
 <template>
   <div class="tg-workbench">
     <WorkbenchSection
-      title="静态贴纸转换"
-      description="PNG / WEBP / JPG 转 Telegram 512px 静态贴纸"
-      badge="浏览器本地"
+      :title="t('image.s1.title')"
+      :description="t('image.s1.desc')"
+      :badge="t('image.s1.badge')"
     >
       <template #icon>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-          <circle cx="8.5" cy="8.5" r="1.5" />
-          <polyline points="21 15 16 10 5 21" />
-        </svg>
+        <ImageUp :size="17" :stroke-width="2" />
       </template>
 
       <UploadZone
-        title="上传图片"
-        hint="支持 PNG / WEBP / JPG，输出写入浏览器缓存"
+        :title="t('image.upload.title')"
+        :hint="t('image.upload.hint')"
         accept="image/png,image/webp,image/jpeg,image/jpg"
         @files-selected="handleFilesSelected"
       />
@@ -23,20 +19,13 @@
 
     <WorkbenchSection
       v-if="tasks.length"
-      title="转换队列"
-      :description="`${doneCount}/${tasks.length} 已完成`"
-      :badge="`${pendingCount} 待处理`"
+      :title="t('image.s2.title')"
+      :description="t('image.s2.done', { done: doneCount, total: tasks.length })"
+      :badge="t('image.s2.pending', { pending: pendingCount })"
       class="tg-section-queue"
     >
       <template #icon>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-          <line x1="8" y1="6" x2="21" y2="6" />
-          <line x1="8" y1="12" x2="21" y2="12" />
-          <line x1="8" y1="18" x2="21" y2="18" />
-          <line x1="3" y1="6" x2="3.01" y2="6" />
-          <line x1="3" y1="12" x2="3.01" y2="12" />
-          <line x1="3" y1="18" x2="3.01" y2="18" />
-        </svg>
+        <ListChecks :size="17" :stroke-width="2" />
       </template>
 
       <div class="tg-gallery-frame">
@@ -60,17 +49,17 @@
             </template>
 
             <template #actions>
-              <button class="tg-btn-ghost tg-btn-primary-soft" type="button" @click="convertSingle(task)" :disabled="task.status === 'converting'">
-                转换
+              <button class="tg-btn-ghost" type="button" @click="convertSingle(task)" :disabled="task.status === 'converting'">
+                {{ t('image.btn.convert') }}
               </button>
               <button class="tg-btn-ghost" type="button" @click="downloadOne(task, 'png')" :disabled="!task.result?.png">
-                PNG
+                {{ t('image.btn.downloadPng') }}
               </button>
               <button class="tg-btn-ghost" type="button" @click="downloadOne(task, 'webp')" :disabled="!task.result?.webp">
-                WEBP
+                {{ t('image.btn.downloadWebp') }}
               </button>
               <button class="tg-btn-ghost tg-btn-danger" type="button" @click="removeTask(task.id)">
-                移除
+                {{ t('image.btn.remove') }}
               </button>
             </template>
           </MediaTaskCard>
@@ -79,12 +68,12 @@
 
       <div class="tg-upload-bar">
         <button class="tg-btn-outline" type="button" @click="convertAll" :disabled="pendingCount === 0 || isConverting">
-          全部转换
+          {{ t('image.btn.convertAll') }}
         </button>
         <div class="tg-upload-bar-info">
-          <button class="tg-btn-ghost" type="button" @click="downloadAll('png')" :disabled="doneCount === 0">下载 PNG</button>
-          <button class="tg-btn-ghost" type="button" @click="downloadAll('webp')" :disabled="doneCount === 0">下载 WEBP</button>
-          <button class="tg-btn-ghost tg-btn-danger" type="button" @click="clearAll">清空</button>
+          <button class="tg-btn-ghost" type="button" @click="downloadAll('png')" :disabled="doneCount === 0">{{ t('image.btn.downloadPng') }}</button>
+          <button class="tg-btn-ghost" type="button" @click="downloadAll('webp')" :disabled="doneCount === 0">{{ t('image.btn.downloadWebp') }}</button>
+          <button class="tg-btn-ghost tg-btn-danger" type="button" @click="clearAll">{{ t('image.btn.clear') }}</button>
         </div>
       </div>
     </WorkbenchSection>
@@ -93,15 +82,19 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { ImageUp, ListChecks } from 'lucide-vue-next'
 import MediaTaskCard from '@/components/workbench/MediaTaskCard.vue'
 import WorkbenchSection from '@/components/workbench/WorkbenchSection.vue'
 import UploadZone from '@/components/ui/UploadZone.vue'
+import { useLocale } from '@/composables/useLocale'
 import { useLightbox } from '@/composables/useLightbox'
 import { useObjectUrlRegistry } from '@/composables/useObjectUrlRegistry'
 import { useHistoryStore } from '@/stores/history'
 import { formatFileSize } from '@/utils/format'
 import { saveCachedSticker } from '@/utils/browserStickerStore'
 import { convertImageToTelegramSticker, resolveReusableWebpSticker } from '@/utils/browserStickerConverter'
+
+const { t, tRaw } = useLocale()
 
 interface ImageTask {
   id: string
@@ -120,10 +113,10 @@ interface ImageTask {
 }
 
 const statusText = (status: ImageTask['status']) => ({
-  pending: '待转换',
-  converting: '转换中',
-  done: '已完成',
-  error: '失败'
+  pending: t('status.pending'),
+  converting: t('status.converting'),
+  done: t('status.done'),
+  error: t('status.error')
 }[status])
 
 const tasks = ref<ImageTask[]>([])
@@ -277,7 +270,7 @@ const convertSingle = async (task: ImageTask) => {
     })
   } catch (error: any) {
     task.status = 'error'
-    task.error = error.message || '转换失败'
+    task.error = (error.message && tRaw(error.message)) || t('image.err.convert')
   }
 }
 
@@ -320,150 +313,3 @@ const openPreview = (task: ImageTask) => {
   lightbox.openImage(task.previewUrl, task.name, meta)
 }
 </script>
-
-<style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap');
-
-.tg-workbench {
-  display: grid;
-  gap: var(--gap-lg);
-}
-
-.tg-gallery-frame {
-  position: relative;
-  padding: 8px;
-  border-radius: 22px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.64), rgba(245, 248, 255, 0.84)),
-    var(--color-bg-subtle);
-  border: 1px solid rgba(37, 99, 235, 0.12);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.68);
-}
-
-:global([data-theme="dark"] .tg-gallery-frame) {
-  background:
-    linear-gradient(180deg, rgba(17, 28, 49, 0.76), rgba(10, 18, 31, 0.92)),
-    var(--color-bg-subtle);
-  border-color: rgba(147, 197, 253, 0.14);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-}
-
-.tg-gallery {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(186px, 1fr));
-  gap: 12px;
-}
-
-.tg-btn-ghost,
-.tg-btn-outline {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  border-radius: 999px;
-  font-family: "Manrope", "Noto Sans SC", sans-serif;
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
-}
-
-.tg-btn-ghost {
-  padding: 5px 10px;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface-solid);
-  color: var(--color-text);
-  font-size: 0.68rem;
-  font-weight: 600;
-}
-
-.tg-btn-outline {
-  padding: 8px 16px;
-  border: 1px solid var(--color-border);
-  background: transparent;
-  color: var(--color-text-secondary);
-  font-size: 0.8rem;
-  font-weight: 600;
-  min-height: 38px;
-}
-
-.tg-btn-primary-soft {
-  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-strong));
-  border-color: transparent;
-  color: #ffffff;
-  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.18);
-}
-
-.tg-btn-ghost:hover:not(:disabled),
-.tg-btn-outline:hover:not(:disabled) {
-  transform: translateY(-1px);
-}
-
-.tg-btn-ghost:hover:not(:disabled) {
-  box-shadow: var(--shadow-sm);
-  border-color: var(--color-border-strong);
-  color: var(--color-accent-strong);
-}
-
-.tg-btn-primary-soft:hover:not(:disabled) {
-  color: #ffffff;
-  border-color: transparent;
-  box-shadow: 0 14px 24px rgba(37, 99, 235, 0.24);
-}
-
-.tg-btn-outline:hover:not(:disabled) {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-  background: var(--color-accent-light);
-}
-
-.tg-btn-danger {
-  color: #b7271d;
-  border-color: rgba(231, 76, 60, 0.35);
-  background: rgba(231, 76, 60, 0.1);
-}
-
-.tg-btn-danger:hover:not(:disabled) {
-  color: #fff;
-  background: rgba(231, 76, 60, 0.9);
-  border-color: rgba(231, 76, 60, 0.9);
-}
-
-.tg-btn-ghost:disabled,
-.tg-btn-outline:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-.tg-upload-bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--color-border);
-}
-
-.tg-upload-bar-info {
-  flex: 1;
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-@media (max-width: 600px) {
-  .tg-gallery-frame {
-    padding: 6px;
-    border-radius: 16px;
-  }
-
-  .tg-gallery {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 8px;
-  }
-
-  .tg-btn-ghost {
-    padding: 3px 6px;
-    font-size: 0.65rem;
-  }
-}
-</style>

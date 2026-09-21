@@ -10,8 +10,8 @@
 .gap-lg { gap: var(--gap-lg); }
 .gap-xl { gap: var(--gap-xl); }
 .text-center { text-align: center; }
-.text-error { color: var(--color-error); }
-.text-secondary { color: var(--color-text-secondary); }
+.text-error { color: var(--err); }
+.text-secondary { color: var(--ink-2); }
 .w-full { width: 100%; }
 .mt-sm { margin-top: var(--gap-sm); }
 .mt-md { margin-top: var(--gap-md); }

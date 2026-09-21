@@ -2,11 +2,7 @@
   <div class="workbench-empty">
     <div class="workbench-empty__icon">
       <slot name="icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32" height="32">
-          <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
-          <line x1="12" y1="8" x2="12" y2="16" />
-          <line x1="8" y1="12" x2="16" y2="12" />
-        </svg>
+        <Sticker :size="30" :stroke-width="1.5" />
       </slot>
     </div>
     <span class="workbench-empty__title">{{ title }}</span>
@@ -15,6 +11,8 @@
 </template>
 
 <script setup lang="ts">
+import { Sticker } from 'lucide-vue-next'
+
 defineProps<{
   title: string
   hint?: string
@@ -27,21 +25,29 @@ defineProps<{
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  padding: 32px 16px;
-  color: var(--color-text-tertiary);
+  padding: 36px 16px;
+  color: var(--ink-3);
   text-align: center;
+  border: 1.5px dashed var(--line);
+  border-radius: var(--radius-md);
 }
 
 .workbench-empty__icon {
-  opacity: 0.4;
+  opacity: 0.6;
+  margin-bottom: 2px;
 }
 
 .workbench-empty__title {
-  font-size: 0.85rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--ink-2);
 }
 
 .workbench-empty__hint {
-  font-size: 0.75rem;
-  opacity: 0.7;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  opacity: 0.85;
+  max-width: 40ch;
+  line-height: 1.7;
 }
 </style>

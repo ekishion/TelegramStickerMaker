@@ -1,45 +1,43 @@
 <template>
   <article class="media-task-card" :class="`is-${status}`">
-    <div class="media-task-card__shell">
-      <div class="media-task-card__preview" @click="$emit('preview')">
-        <div class="media-task-card__media">
-          <slot name="media" />
+    <div class="media-task-card__preview" @click="$emit('preview')">
+      <div class="media-task-card__media">
+        <slot name="media" />
+      </div>
+      <span class="media-task-card__badge">{{ statusLabel }}</span>
+      <div v-if="status === 'converting'" class="media-task-card__progress">
+        <svg viewBox="0 0 36 36">
+          <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="3" />
+          <circle
+            cx="18"
+            cy="18"
+            r="15"
+            fill="none"
+            stroke="var(--accent)"
+            stroke-width="3"
+            stroke-dasharray="94"
+            :stroke-dashoffset="94 - (94 * progress / 100)"
+            stroke-linecap="round"
+            transform="rotate(-90 18 18)"
+          />
+        </svg>
+        <span class="media-task-card__progress-text">{{ progress }}%</span>
+      </div>
+    </div>
+
+    <div class="media-task-card__body">
+      <div class="media-task-card__info">
+        <div class="media-task-card__name" :title="name">{{ name }}</div>
+        <div class="media-task-card__meta">
+          <slot name="meta" />
         </div>
-        <span class="media-task-card__badge">{{ statusLabel }}</span>
-        <div v-if="status === 'converting'" class="media-task-card__progress">
-          <svg viewBox="0 0 36 36">
-            <circle cx="18" cy="18" r="15" fill="none" stroke="var(--color-border)" stroke-width="3" />
-            <circle
-              cx="18"
-              cy="18"
-              r="15"
-              fill="none"
-              stroke="var(--color-accent)"
-              stroke-width="3"
-              stroke-dasharray="94"
-              :stroke-dashoffset="94 - (94 * progress / 100)"
-              stroke-linecap="round"
-              transform="rotate(-90 18 18)"
-            />
-          </svg>
-          <span class="media-task-card__progress-text">{{ progress }}%</span>
+        <div v-if="$slots.extra" class="media-task-card__extra">
+          <slot name="extra" />
         </div>
       </div>
 
-      <div class="media-task-card__body">
-        <div class="media-task-card__info">
-          <div class="media-task-card__name" :title="name">{{ name }}</div>
-          <div class="media-task-card__meta">
-            <slot name="meta" />
-          </div>
-          <div v-if="$slots.extra" class="media-task-card__extra">
-            <slot name="extra" />
-          </div>
-        </div>
-
-        <div class="media-task-card__actions">
-          <slot name="actions" />
-        </div>
+      <div class="media-task-card__actions">
+        <slot name="actions" />
       </div>
     </div>
   </article>
@@ -64,61 +62,49 @@ const progress = computed(() => props.progress ?? 0)
 
 <style scoped>
 .media-task-card {
-  --task-accent: var(--color-text-tertiary);
+  --task-accent: var(--ink-3);
   min-width: 0;
-  font-family: "Manrope", "Noto Sans SC", sans-serif;
 }
 
 .media-task-card.is-converting {
-  --task-accent: var(--color-accent);
+  --task-accent: var(--accent-ink);
 }
 
 .media-task-card.is-done {
-  --task-accent: var(--color-success);
+  --task-accent: var(--ok);
 }
 
 .media-task-card.is-error {
-  --task-accent: var(--color-error);
+  --task-accent: var(--err);
 }
 
-.media-task-card__shell {
-  border-radius: 20px;
-  padding: 1px;
-  background: var(--color-border);
-  box-shadow: var(--shadow-sm);
-  overflow: hidden;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.media-task-card:hover .media-task-card__shell {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-lg);
-}
-
+/* Die-cut sticker: light edge frame around the preview */
 .media-task-card__preview {
   position: relative;
   width: 100%;
   aspect-ratio: 1;
-  border-radius: 19px 19px 0 0;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  background: var(--color-surface-solid);
-  overflow: hidden;
+  background: var(--sticker-edge);
+  border: 1px solid var(--line);
+  padding: 5px;
+  box-shadow: var(--shadow-cut);
+  transition: transform 0.25s var(--ease-out), box-shadow 0.25s var(--ease-out);
+}
+
+.media-task-card:hover .media-task-card__preview {
+  transform: translateY(-3px) rotate(-0.6deg);
+  box-shadow: var(--shadow-lg);
 }
 
 .media-task-card__media {
   width: 100%;
   height: 100%;
+  border-radius: calc(var(--radius-md) - 5px);
+  overflow: hidden;
   display: grid;
   place-items: center;
-  background:
-    radial-gradient(circle at top, rgba(37, 99, 235, 0.05), transparent 45%),
-    linear-gradient(180deg, rgba(247, 250, 255, 0.98), rgba(240, 245, 255, 0.98));
-}
-
-:global([data-theme="dark"] .media-task-card__media) {
-  background:
-    radial-gradient(circle at top, rgba(96, 165, 250, 0.12), transparent 48%),
-    linear-gradient(180deg, rgba(18, 28, 47, 0.96), rgba(12, 20, 36, 0.96));
+  background: var(--paper-2);
 }
 
 .media-task-card__media :deep(img),
@@ -131,37 +117,42 @@ const progress = computed(() => props.progress ?? 0)
 
 .media-task-card__badge {
   position: absolute;
-  left: 10px;
-  top: 10px;
-  font-size: 0.6rem;
-  font-weight: 700;
-  padding: 5px 9px;
-  border-radius: 999px;
-  color: #fff;
-  background: rgba(10, 10, 10, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  backdrop-filter: blur(6px);
+  left: 12px;
+  top: 12px;
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  padding: 4px 9px;
+  border-radius: var(--radius-full);
+  color: var(--on-ink);
+  background: var(--ink);
 }
 
 .media-task-card.is-converting .media-task-card__badge {
-  background: rgba(37, 99, 235, 0.9);
+  background: var(--accent);
+  color: var(--on-accent);
 }
 
 .media-task-card.is-done .media-task-card__badge {
-  background: rgba(41, 177, 93, 0.82);
+  background: var(--ok);
+  color: #fff;
 }
 
 .media-task-card.is-error .media-task-card__badge {
-  background: rgba(232, 78, 60, 0.82);
+  background: var(--err);
+  color: #fff;
 }
 
 .media-task-card__progress {
   position: absolute;
-  inset: 0;
+  inset: 5px;
+  border-radius: calc(var(--radius-md) - 5px);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(10, 10, 12, 0.45);
+  backdrop-filter: blur(2px);
 }
 
 .media-task-card__progress svg {
@@ -171,17 +162,16 @@ const progress = computed(() => props.progress ?? 0)
 
 .media-task-card__progress-text {
   position: absolute;
+  font-family: var(--font-mono);
   font-size: 0.62rem;
-  font-weight: 700;
+  font-weight: 600;
   color: #fff;
 }
 
 .media-task-card__body {
   display: grid;
   gap: 10px;
-  padding: 12px 12px 14px;
-  background: var(--color-surface);
-  border-top: 1px solid var(--color-border);
+  padding: 11px 3px 0;
 }
 
 .media-task-card__info {
@@ -190,11 +180,12 @@ const progress = computed(() => props.progress ?? 0)
 }
 
 .media-task-card__name {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--color-text);
-  line-height: 1.35;
-  min-height: calc(1.35em * 2);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--ink);
+  line-height: 1.45;
+  min-height: calc(1.45em * 2);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -204,18 +195,19 @@ const progress = computed(() => props.progress ?? 0)
 
 .media-task-card__meta {
   display: flex;
-  gap: 6px;
+  gap: 5px;
   flex-wrap: wrap;
 }
 
 .media-task-card__meta :deep(span) {
-  font-size: 0.62rem;
-  font-weight: 600;
-  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 500;
+  color: var(--ink-2);
   padding: 2px 7px;
-  border-radius: 999px;
-  background: var(--color-bg-subtle);
-  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  background: var(--paper-2);
+  border: 1px solid var(--line);
 }
 
 .media-task-card__extra {
@@ -230,13 +222,13 @@ const progress = computed(() => props.progress ?? 0)
 
 @media (max-width: 600px) {
   .media-task-card__body {
-    padding: 10px;
+    padding: 9px 2px 0;
     gap: 8px;
   }
 
   .media-task-card__name {
     min-height: 0;
-    font-size: 0.74rem;
+    font-size: 0.68rem;
   }
 }
 </style>
