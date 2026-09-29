@@ -29,8 +29,6 @@ export interface BrowserStickerResult {
 
 export interface DirectStickerCheckResult {
   reusable: boolean
-  reason?: string
-  ruleKeys?: string[]
   result?: BrowserStickerResult
 }
 
@@ -324,8 +322,11 @@ export async function resolveReusableWebpSticker(file: File): Promise<DirectStic
       height: source.height
     })
 
+    // A non-compliant source (e.g. 100x100, or over 512KB) is not a failure —
+    // it just cannot be reused byte-for-byte. Callers fall through to
+    // conversion, which scales the long side to 512px and re-encodes.
     if (errors.length) {
-      return { reusable: false, reason: errors.join('，'), ruleKeys: errors }
+      return { reusable: false }
     }
 
     const blob = file.slice(0, file.size, 'image/webp')
@@ -364,8 +365,10 @@ export async function resolveReusableWebmSticker(file: File): Promise<DirectStic
       duration: safeDuration
     })
 
+    // Not directly reusable (wrong size, over 256KB, longer than 3s): the
+    // caller re-encodes it, which clamps duration and rescales to 512px.
     if (errors.length) {
-      return { reusable: false, reason: errors.join('，'), ruleKeys: errors }
+      return { reusable: false }
     }
 
     const blob = file.slice(0, file.size, 'video/webm')
@@ -417,7 +420,7 @@ export async function convertImageToTelegramSticker(file: File): Promise<{
     width: size.width,
     height: size.height
   })
-  if (webpErrors.length) throw new Error(webpErrors.join('；'))
+  if (webpErrors.length) throw new LocalizedRuleError(webpErrors)
 
   return {
     png: {

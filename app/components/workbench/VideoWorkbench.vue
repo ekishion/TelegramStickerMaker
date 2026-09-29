@@ -238,8 +238,8 @@ const convertSingle = async (task: VideoTask) => {
       return
     }
 
-    if (reusableWebm.ruleKeys?.length) throw new LocalizedRuleError(reusableWebm.ruleKeys)
-
+    // Not directly reusable (wrong size, over 256KB, longer than 3s): fall
+    // through to conversion, which clamps the duration and rescales to 512px.
     const converted = await convertVideoToTelegramSticker(task.file, (progress, key) => {
       task.progress = progress
       task.messageKey = key

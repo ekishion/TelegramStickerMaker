@@ -232,8 +232,8 @@ const convertSingle = async (task: ImageTask) => {
       return
     }
 
-    if (reusableWebp.ruleKeys?.length) throw new LocalizedRuleError(reusableWebp.ruleKeys)
-
+    // Not directly reusable (e.g. a 100x100 webp, or over 512KB): fall through
+    // to conversion, which scales the long side to 512px and re-encodes.
     const converted = await convertImageToTelegramSticker(task.file)
     task.progress = 80
 
