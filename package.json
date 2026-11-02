@@ -26,16 +26,16 @@
     "@fontsource-variable/unbounded": "^5.3.0",
     "@pinia/nuxt": "^1.0.3",
     "lucide-vue-next": "^1.0.0",
-    "nuxt": "^4.6.1",
+    "nuxt": "^4.6.3",
     "pinia": "^4.0.3",
     "vue": "^3.5.44",
     "vue-router": "^5.4.0"
   },
   "devDependencies": {
-    "@types/node": "^26.6.5",
+    "@types/node": "^26.6.6",
     "typescript": "5.9.3",
     "vitest": "^5.0.5",
-    "vue-tsc": "3.3.13"
+    "vue-tsc": "3.3.14"
   },
   "overrides": {
     "@simple-git/argv-parser": "^2.0.1",
